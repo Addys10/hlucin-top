@@ -392,7 +392,7 @@ export default function Dashboard() {
                     {c.length_mm ? `${c.length_mm} mm · ` : ''}{new Date(c.created_at).toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </p>
                   <span className="font-mono font-bold text-gray-800 tabular-nums text-[15px]">
-                    {(c.weight_g / 1000).toFixed(3)} kg
+                    {(c.weight_g / 1000).toFixed(2)} kg
                   </span>
                 </div>
                 <div className="flex gap-1.5 shrink-0">

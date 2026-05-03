@@ -59,24 +59,32 @@ const RANKS = [
 // ─── Bar chart ───────────────────────────────────────────────────────────────
 
 function BarChart({ catches }: { catches: CatchDetail[] }) {
-  const byTime = [...catches].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-  const maxWeight = Math.max(...byTime.map(c => c.weight_g), 1)
-  const top3Ids = [...catches].sort((a, b) => b.weight_g - a.weight_g).slice(0, 3).map(c => c.id)
+  const byDay = Object.entries(
+    catches.reduce<Record<string, number>>((acc, c) => {
+      const day = new Date(c.created_at).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric' })
+      acc[day] = (acc[day] ?? 0) + c.weight_g
+      return acc
+    }, {})
+  ).sort(([a], [b]) => {
+    const parse = (s: string) => { const [d, m] = s.split('.').map(Number); return m * 100 + d }
+    return parse(a) - parse(b)
+  })
+
+  const maxWeight = Math.max(...byDay.map(([, w]) => w), 1)
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-end gap-1.5 flex-1 pb-1">
-        {byTime.map(c => {
-          const pct = (c.weight_g / maxWeight) * 100
-          const isTop3 = top3Ids.includes(c.id)
+      <div className="flex items-end gap-2 flex-1 pb-1">
+        {byDay.map(([day, weight_g]) => {
+          const pct = (weight_g / maxWeight) * 100
           return (
-            <div key={c.id} className="flex flex-col items-center gap-1 flex-1 min-w-0">
+            <div key={day} className="flex flex-col items-center gap-1 flex-1 min-w-0">
               <span className="text-[10px] font-mono text-gray-500 tabular-nums leading-none">
-                {(c.weight_g / 1000).toFixed(2)}
+                {(weight_g / 1000).toFixed(2)} kg
               </span>
               <div className="w-full flex items-end" style={{ height: 100 }}>
                 <div
-                  className={`w-full rounded-t-lg transition-all duration-700 ${isTop3 ? 'bg-blue-500' : 'bg-blue-200'}`}
+                  className="w-full rounded-t-lg bg-blue-500 transition-all duration-700"
                   style={{ height: `${pct}%` }}
                 />
               </div>
@@ -84,10 +92,10 @@ function BarChart({ catches }: { catches: CatchDetail[] }) {
           )
         })}
       </div>
-      <div className="flex gap-1.5 border-t border-gray-100 pt-1">
-        {byTime.map(c => (
-          <div key={c.id} className="flex-1 text-center text-[10px] text-gray-400 tabular-nums">
-            {new Date(c.created_at).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric' })}
+      <div className="flex gap-2 border-t border-gray-100 pt-1">
+        {byDay.map(([day]) => (
+          <div key={day} className="flex-1 text-center text-[10px] text-gray-400 tabular-nums">
+            {day}
           </div>
         ))}
       </div>
@@ -133,7 +141,7 @@ function TeamDetail({ team }: { team: TeamScore }) {
             ) : (
               <>
                 <Stat label="Váha (top 3)" value={catches.length > 0 ? `${(totalWeight / 1000).toFixed(1)} kg` : '—'} />
-                <Stat label="Celková váha" value={catches.length > 0 ? `${(catches.reduce((s, c) => s + c.weight_g, 0) / 1000).toFixed(3)} kg` : '—'} />
+                <Stat label="Celková váha" value={catches.length > 0 ? `${(catches.reduce((s, c) => s + c.weight_g, 0) / 1000).toFixed(2)} kg` : '—'} />
                 <Stat label="Počet úlovků" value={String(catches.length)} />
               </>
             )}
@@ -190,7 +198,7 @@ function TeamDetail({ team }: { team: TeamScore }) {
                   </p>
                 </div>
                 <div className="text-right">
-                  <span className="font-mono font-bold text-gray-800 tabular-nums">{(c.weight_g / 1000).toFixed(3)} kg</span>
+                  <span className="font-mono font-bold text-gray-800 tabular-nums">{(c.weight_g / 1000).toFixed(2)} kg</span>
                   {isTop3 && <p className="text-[10px] text-blue-500 font-semibold">TOP 3</p>}
                 </div>
                 <div className="flex gap-1 shrink-0">
@@ -408,7 +416,7 @@ export default function Leaderboard() {
                   <div className="w-28 text-right shrink-0">
                     <span className="font-mono font-bold text-gray-800 tabular-nums text-[15px]">
                       {team.totalWeight > 0
-                        ? `${(team.totalWeight / 1000).toFixed(3)} kg`
+                        ? `${(team.totalWeight / 1000).toFixed(2)} kg`
                         : <span className="text-gray-300 font-normal">—</span>}
                     </span>
                   </div>
@@ -416,7 +424,7 @@ export default function Leaderboard() {
                     {team.heaviestWeight > 0 ? (
                       <div>
                         <span className="font-mono font-semibold text-gray-700 tabular-nums text-sm">
-                          {(team.heaviestWeight / 1000).toFixed(3)} kg
+                          {(team.heaviestWeight / 1000).toFixed(2)} kg
                         </span>
                         <p className="text-xs text-gray-400 truncate">{team.heaviestFish}</p>
                       </div>
