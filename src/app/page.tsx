@@ -51,9 +51,9 @@ function calculateScores(teams: Team[], catches: Catch[]): TeamScore[] {
 }
 
 const RANKS = [
-  { bg: 'bg-yellow-400', text: 'text-yellow-900', row: 'bg-yellow-50 border-yellow-100' },
-  { bg: 'bg-gray-300',   text: 'text-gray-700',   row: 'bg-gray-50 border-gray-100' },
-  { bg: 'bg-orange-300', text: 'text-orange-900',  row: 'bg-orange-50 border-orange-100' },
+  { card: 'bg-gradient-to-r from-[oklch(98%_0.05_82)] to-white border-[var(--ds-gold)] border-[1.5px]', medal: 'bg-[var(--ds-gold)] text-[oklch(22%_0.06_80)] shadow-[0_2px_8px_var(--ds-gold)]', row: '' },
+  { card: 'bg-gradient-to-r from-[oklch(98%_0.005_240)] to-white border-[oklch(78%_0.01_240)] border-[1.5px]', medal: 'bg-[var(--ds-silver)] text-white', row: '' },
+  { card: 'bg-gradient-to-r from-[oklch(97%_0.035_55)] to-white border-[oklch(78%_0.07_55)] border-[1.5px]', medal: 'bg-[var(--ds-bronze)] text-white', row: '' },
 ]
 
 // ─── Bar chart ───────────────────────────────────────────────────────────────
@@ -79,12 +79,12 @@ function BarChart({ catches }: { catches: CatchDetail[] }) {
           const pct = (weight_g / maxWeight) * 100
           return (
             <div key={day} className="flex flex-col items-center gap-1 flex-1 min-w-0">
-              <span className="text-[10px] font-mono text-gray-500 tabular-nums leading-none">
+              <span className="text-[10px] font-mono text-[var(--ds-ink-3)] tabular-nums leading-none">
                 {(weight_g / 1000).toFixed(2)} kg
               </span>
               <div className="w-full flex items-end" style={{ height: 100 }}>
                 <div
-                  className="w-full rounded-t-lg bg-blue-500 transition-all duration-700"
+                  className="w-full rounded-t-lg bg-[var(--ds-forest-mid)] hover:bg-[var(--ds-forest)] transition-colors transition-all duration-700"
                   style={{ height: `${pct}%` }}
                 />
               </div>
@@ -92,9 +92,9 @@ function BarChart({ catches }: { catches: CatchDetail[] }) {
           )
         })}
       </div>
-      <div className="flex gap-2 border-t border-gray-100 pt-1">
+      <div className="flex gap-2 border-t border-[var(--ds-border)] pt-1">
         {byDay.map(([day]) => (
-          <div key={day} className="flex-1 text-center text-[10px] text-gray-400 tabular-nums">
+          <div key={day} className="flex-1 text-center text-[10px] text-[var(--ds-ink-4)] tabular-nums">
             {day}
           </div>
         ))}
@@ -130,10 +130,10 @@ function TeamDetail({ team }: { team: TeamScore }) {
   return (
     <div className="flex flex-col">
       {/* Stats + chart */}
-      <div className="bg-gray-50 border-b border-gray-200">
+      <div className="bg-[var(--ds-sand-50)] border-b border-[var(--ds-border)]">
         <div className="flex flex-col sm:flex-row">
           {/* Stats */}
-          <div className="sm:w-52 shrink-0 px-5 py-5 flex flex-col gap-3 border-b sm:border-b-0 sm:border-r border-gray-200">
+          <div className="sm:w-52 shrink-0 px-5 py-5 flex flex-col gap-3 border-b sm:border-b-0 sm:border-r border-[var(--ds-border)]">
             {loading ? (
               Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="h-8 bg-gray-200 rounded-lg animate-pulse" />
@@ -148,7 +148,8 @@ function TeamDetail({ team }: { team: TeamScore }) {
           </div>
 
           {/* Chart */}
-          <div className="flex-1 px-5 py-5" style={{ minHeight: 140 }}>
+          <div className="flex-1 px-5 py-5 flex flex-col" style={{ minHeight: 140 }}>
+            <p className="text-[11px] font-bold uppercase tracking-[0.07em] text-[var(--ds-ink-4)] mb-2">Váha dle dne</p>
             {loading ? (
               <div className="h-28 flex items-end gap-2">
                 {Array.from({ length: 5 }).map((_, i) => (
@@ -166,8 +167,8 @@ function TeamDetail({ team }: { team: TeamScore }) {
 
       {/* Catches list */}
       <div>
-        <div className="px-4 py-3 border-b border-gray-100">
-          <p className="font-semibold text-gray-900 text-sm">Všechny úlovky</p>
+        <div className="px-4 py-3 border-b border-[var(--ds-border)]">
+          <p className="font-bold text-[var(--ds-ink-2)] text-sm">Všechny úlovky</p>
         </div>
 
         {loading ? (
@@ -186,27 +187,27 @@ function TeamDetail({ team }: { team: TeamScore }) {
             return (
               <div
                 key={c.id}
-                className={`flex items-center gap-3 px-4 py-3.5 border-b last:border-0 ${isTop3 ? 'bg-blue-50 border-blue-100' : 'border-gray-50'}`}
+                className={`flex items-center gap-3 px-4 py-3.5 border-b last:border-0 ${isTop3 ? 'bg-[var(--ds-gold-pale)] border-[var(--ds-border)]' : 'border-[var(--ds-border)]'}`}
               >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isTop3 ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isTop3 ? 'bg-[var(--ds-gold-pale)] text-[oklch(48%_0.12_82)]' : 'bg-[var(--ds-forest-pale)] text-[var(--ds-forest-mid)]'}`}>
                   <Fish className="w-4 h-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-900 text-[15px]">{c.fish_type}</p>
-                  <p className="text-xs text-gray-400">
+                  <p className="font-bold text-[var(--ds-ink)] text-[14px]">{c.fish_type}</p>
+                  <p className="text-xs text-[var(--ds-ink-4)]">
                     {c.length_mm} mm · {new Date(c.created_at).toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
                 <div className="text-right">
-                  <span className="font-mono font-bold text-gray-800 tabular-nums">{(c.weight_g / 1000).toFixed(2)} kg</span>
-                  {isTop3 && <p className="text-[10px] text-blue-500 font-semibold">TOP 3</p>}
+                  <span className="font-mono font-extrabold text-[var(--ds-ink)] tabular-nums text-[16px]">{(c.weight_g / 1000).toFixed(2)} kg</span>
+                  {isTop3 && <span className="text-[10px] font-bold bg-[var(--ds-gold-pale)] text-[oklch(40%_0.13_82)] px-2 py-0.5 rounded-full mt-1 inline-block">TOP 3</span>}
                 </div>
                 <div className="flex gap-1 shrink-0">
                   {[c.photo_url_1, c.photo_url_2].filter(Boolean).map((url, pi) => (
                     <button
                       key={pi}
                       onClick={() => setLightbox(url!)}
-                      className="w-9 h-9 rounded-lg overflow-hidden border border-gray-200 shrink-0 active:opacity-70"
+                      className="w-9 h-9 rounded-lg overflow-hidden border border-[var(--ds-border)] shrink-0 active:opacity-70"
                     >
                       <Image src={url!} alt="foto" width={36} height={36} className="object-cover w-full h-full" />
                     </button>
@@ -244,9 +245,9 @@ function TeamDetail({ team }: { team: TeamScore }) {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <p className="text-[10px] font-bold text-blue-700 uppercase tracking-widest">{label}</p>
-      <p className="text-sm text-gray-700 font-semibold mt-0.5">{value}</p>
+    <div className="bg-[var(--ds-sand-100)] border border-[var(--ds-border)] rounded-xl px-3 py-3">
+      <p className="text-[10px] font-bold text-[var(--ds-forest-lt)] uppercase tracking-[0.08em] mb-0.5">{label}</p>
+      <p className="text-[22px] font-extrabold font-mono text-[var(--ds-ink)] leading-tight">{value}</p>
     </div>
   )
 }
@@ -301,27 +302,16 @@ export default function Leaderboard() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[var(--ds-bg)]">
 
       {/* Navbar */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      <header className="bg-[var(--ds-forest)] border-b border-[oklch(100%_0_0/0.08)] shadow-[0_2px_12px_oklch(16%_0.02_80/0.18)] sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
 
           {/* Left: logo + title */}
           <div className="flex items-center gap-2.5">
             <Image src="/image.png" alt="Hlučín Top 3" width={36} height={36} className="rounded-xl shrink-0" />
-            <div>
-              <p className="font-bold text-gray-900 text-sm leading-tight">HLUČÍN TOP 3</p>
-              <div className="flex items-center gap-1 mt-0.5">
-                <span className="relative flex h-1.5 w-1.5 shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500" />
-                </span>
-                <span className="text-[11px] text-gray-400 tabular-nums">
-                  {loading ? 'Načítám...' : updatedAt.toLocaleTimeString('cs-CZ')}
-                </span>
-              </div>
-            </div>
+            <p className="font-bold text-white text-sm">HLUČÍN TOP 3</p>
           </div>
 
           {/* Right: auth */}
@@ -330,21 +320,21 @@ export default function Leaderboard() {
               {session && teamName && (
                 <>
                   <div className="flex flex-col items-end">
-                    <span className="text-[11px] text-gray-400 leading-tight">Přihlášen jako</span>
-                    <span className="text-sm font-semibold text-gray-800 leading-tight">{teamName}</span>
+                    <span className="text-[11px] text-[oklch(100%_0_0/0.65)] leading-tight">Přihlášen jako</span>
+                    <span className="text-sm font-semibold text-white leading-tight">{teamName}</span>
                   </div>
-                  <div className="w-px h-6 bg-gray-200 mx-1" />
+                  <div className="w-px h-5 bg-[oklch(100%_0_0/0.15)] mx-1" />
                   {isAdmin && (
                     <Link
                       href="/admin"
-                      className="text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors px-4 py-2 rounded-xl"
+                      className="text-sm font-semibold text-[var(--ds-forest)] bg-white hover:bg-[var(--ds-sand-100)] transition-colors px-4 py-2 rounded-lg"
                     >
                       Admin
                     </Link>
                   )}
                   <Link
                     href="/dashboard"
-                    className="text-sm font-semibold text-white bg-blue-500 hover:bg-blue-600 transition-colors px-4 py-2 rounded-xl"
+                    className="text-sm font-semibold text-white bg-[oklch(100%_0_0/0.15)] hover:bg-[oklch(100%_0_0/0.22)] transition-colors px-4 py-2 rounded-lg"
                   >
                     Úlovky
                   </Link>
@@ -352,7 +342,7 @@ export default function Leaderboard() {
               )}
               <button
                 onClick={async () => { await supabase.auth.signOut(); setSession(null); setTeamName(null); setIsAdmin(false) }}
-                className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                className="p-2 rounded-lg text-[oklch(100%_0_0/0.55)] hover:text-white hover:bg-[oklch(100%_0_0/0.12)] transition-colors"
                 title="Odhlásit se"
               >
                 <LogOut className="w-4 h-4" />
@@ -361,7 +351,7 @@ export default function Leaderboard() {
           ) : (
             <Link
               href="/login"
-              className="text-sm font-semibold text-white bg-blue-500 hover:bg-blue-600 transition-colors px-4 py-2 rounded-xl"
+              className="text-sm font-semibold text-[var(--ds-forest)] bg-white hover:bg-[var(--ds-sand-100)] transition-colors px-4 py-2 rounded-lg"
             >
               Přihlásit se
             </Link>
@@ -370,19 +360,28 @@ export default function Leaderboard() {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-6 flex flex-col gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900">Výsledky závodu</h2>
-          <p className="text-sm text-gray-500 mt-0.5">Pořadí dle součtu 3 nejtěžších úlovků</p>
+        <div className="mb-7">
+          <p className="text-[11px] font-bold uppercase tracking-[0.10em] text-[var(--ds-forest-lt)] mb-1">Živé pořadí</p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-[28px] font-extrabold text-[var(--ds-ink)] leading-tight tracking-tight">Výsledky závodu</h2>
+              <p className="text-sm text-[var(--ds-ink-3)] mt-1">Součet 3 nejtěžších úlovků na tým</p>
+            </div>
+            <div className="flex items-center gap-2 bg-white border border-[var(--ds-border)] rounded-full px-4 py-2 shadow-sm font-mono text-[15px] font-medium text-[var(--ds-ink-2)] shrink-0 whitespace-nowrap">
+              <span className="w-2 h-2 rounded-full bg-[oklch(60%_0.20_148)] shrink-0 shadow-[0_0_0_0_oklch(60%_0.20_148)] animate-pulse" />
+              {loading ? 'Načítám...' : updatedAt.toLocaleTimeString('cs-CZ')}
+            </div>
+          </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+        <div className="bg-white rounded-[18px] border border-[var(--ds-border)] overflow-hidden shadow-[0_3px_10px_oklch(16%_0.02_80/0.09),0_1px_3px_oklch(16%_0.02_80/0.05)]">
           {/* Column headers */}
-          <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-100">
+          <div className="flex items-center gap-3 px-4 py-2.5 border-b border-[var(--ds-border)]">
             <div className="w-8 shrink-0" />
-            <div className="flex-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Tým</div>
-            <div className="w-28 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide shrink-0">Váha (top 3)</div>
-            <div className="w-32 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide shrink-0 hidden sm:block">NR</div>
-            <div className="w-12 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide shrink-0 hidden sm:block">PÚ</div>
+            <div className="flex-1 text-xs font-semibold text-[var(--ds-ink-4)] uppercase tracking-wide">Tým</div>
+            <div className="w-28 text-right text-xs font-semibold text-[var(--ds-ink-4)] uppercase tracking-wide shrink-0">Váha (top 3)</div>
+            <div className="w-32 text-right text-xs font-semibold text-[var(--ds-ink-4)] uppercase tracking-wide shrink-0 hidden sm:block">NR</div>
+            <div className="w-12 text-right text-xs font-semibold text-[var(--ds-ink-4)] uppercase tracking-wide shrink-0 hidden sm:block">PÚ</div>
             <div className="w-5 shrink-0" />
           </div>
 
@@ -405,35 +404,32 @@ export default function Leaderboard() {
                 <button
                   key={team.id}
                   onClick={() => setSelectedTeam(team)}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 border-b last:border-0 text-left transition-opacity active:opacity-70 ${rank ? rank.row : 'border-gray-50 hover:bg-gray-50'}`}
+                  className={`w-full flex items-center gap-3 px-5 py-4 border-b last:border-0 text-left transition-all hover:-translate-y-px hover:shadow-[0_3px_10px_oklch(16%_0.02_80/0.09)] ${rank ? rank.card : 'border-[var(--ds-border)] hover:bg-[var(--ds-sand-50)]'}`}
                 >
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-sm font-bold ${rank ? `${rank.bg} ${rank.text}` : 'bg-gray-100 text-gray-400'}`}>
+                  <div className={rank ? `${rank.medal} w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-[15px] font-extrabold font-mono` : 'bg-[var(--ds-sand-200)] text-[var(--ds-ink-3)] w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-[14px] font-extrabold font-mono'}>
                     {i + 1}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900 truncate text-[15px]">{team.name}</p>
+                    <p className="font-bold text-[var(--ds-ink)] truncate text-[17px]">{team.name}</p>
                   </div>
-                  <div className="w-28 text-right shrink-0">
-                    <span className="font-mono font-bold text-gray-800 tabular-nums text-[15px]">
-                      {team.totalWeight > 0
-                        ? `${(team.totalWeight / 1000).toFixed(2)} kg`
-                        : <span className="text-gray-300 font-normal">—</span>}
-                    </span>
+                  <div className="text-right shrink-0">
+                    <div className="font-mono font-extrabold text-[var(--ds-ink)] tabular-nums text-[20px] leading-tight">{team.totalWeight > 0 ? (team.totalWeight / 1000).toFixed(2) : '—'}</div>
+                    <div className="text-[12px] text-[var(--ds-ink-3)] font-medium">kg TOP 3</div>
                   </div>
                   <div className="w-32 text-right shrink-0 hidden sm:block">
                     {team.heaviestWeight > 0 ? (
                       <div>
-                        <span className="font-mono font-semibold text-gray-700 tabular-nums text-sm">
+                        <span className="font-mono font-bold text-[var(--ds-ink-2)] tabular-nums text-sm">
                           {(team.heaviestWeight / 1000).toFixed(2)} kg
                         </span>
-                        <p className="text-xs text-gray-400 truncate">{team.heaviestFish}</p>
+                        <p className="text-xs text-[var(--ds-ink-4)] truncate">{team.heaviestFish}</p>
                       </div>
-                    ) : <span className="text-gray-300">—</span>}
+                    ) : <span className="text-[var(--ds-ink-5)]">—</span>}
                   </div>
-                  <div className="w-12 text-right shrink-0 text-sm text-gray-500 tabular-nums font-medium hidden sm:block">
+                  <div className="w-12 text-right shrink-0 text-[var(--ds-ink-3)] font-bold font-mono tabular-nums hidden sm:block">
                     {team.catchCount}
                   </div>
-                  <ChevronRight className="w-5 h-5 text-blue-400 shrink-0" />
+                  <ChevronRight className="w-5 h-5 text-[var(--ds-ink-5)] shrink-0" />
                 </button>
               )
             })
@@ -442,9 +438,9 @@ export default function Leaderboard() {
 
         {/* Legend */}
         <div className="flex flex-wrap gap-x-5 gap-y-1 px-1">
-          <p className="text-xs text-gray-400"><span className="font-semibold text-gray-500">Váha (top 3)</span> — součet hmotností 3 nejtěžších úlovků</p>
-          <p className="text-xs text-gray-400"><span className="font-semibold text-gray-500">NR</span> — nejtěžší ryba</p>
-          <p className="text-xs text-gray-400"><span className="font-semibold text-gray-500">PÚ</span> — počet úlovků</p>
+          <p className="text-xs text-[var(--ds-ink-4)]"><span className="font-semibold text-[var(--ds-ink-3)]">Váha (top 3)</span> — součet hmotností 3 nejtěžších úlovků</p>
+          <p className="text-xs text-[var(--ds-ink-4)]"><span className="font-semibold text-[var(--ds-ink-3)]">NR</span> — nejtěžší ryba</p>
+          <p className="text-xs text-[var(--ds-ink-4)]"><span className="font-semibold text-[var(--ds-ink-3)]">PÚ</span> — počet úlovků</p>
         </div>
 
       </main>
@@ -453,14 +449,14 @@ export default function Leaderboard() {
       <Dialog open={!!selectedTeam} onOpenChange={open => { if (!open) setSelectedTeam(null) }}>
         <DialogContent className="p-0 gap-0 w-full h-[100dvh] max-w-none sm:max-w-2xl sm:h-[90vh] rounded-none sm:rounded-2xl overflow-y-auto" showCloseButton={false}>
           {/* Sticky header */}
-          <div className="flex items-center gap-3 px-4 h-14 border-b border-gray-200 bg-white sticky top-0 z-10">
+          <div className="flex items-center gap-3 px-4 h-14 border-b border-[var(--ds-border)] bg-white sticky top-0 z-10">
             <button
               onClick={() => setSelectedTeam(null)}
-              className="p-1.5 -ml-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+              className="p-1.5 -ml-1.5 rounded-lg hover:bg-[var(--ds-sand-100)] text-[var(--ds-ink-3)] transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <DialogTitle className="font-semibold text-gray-900 text-[15px] truncate">
+            <DialogTitle className="font-extrabold text-[var(--ds-ink)] text-[15px] truncate">
               {selectedTeam?.name}
             </DialogTitle>
           </div>

@@ -59,9 +59,9 @@ function PhotoPicker({ label, preview, onChange, onClear, disabled }: {
   const ref = useRef<HTMLInputElement>(null)
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-sm font-medium text-gray-700">{label}<span className="text-red-500 ml-0.5">*</span></label>
+      <label className="text-[13px] font-semibold text-[var(--ds-ink-2)]">{label}<span className="text-red-500 ml-0.5">*</span></label>
       {preview ? (
-        <div className="relative rounded-xl overflow-hidden border border-gray-200" style={{ aspectRatio: '4/3' }}>
+        <div className="relative rounded-xl overflow-hidden border border-[var(--ds-border)]" style={{ aspectRatio: '4/3' }}>
           <Image src={preview} alt="náhled" fill className="object-cover" />
           {!disabled && (
             <button type="button" onClick={onClear} className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1">
@@ -71,9 +71,9 @@ function PhotoPicker({ label, preview, onChange, onClear, disabled }: {
         </div>
       ) : (
         <button type="button" onClick={() => ref.current?.click()} disabled={disabled}
-          className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 hover:border-blue-300 hover:bg-blue-50 transition-colors disabled:opacity-50 py-8">
-          <Camera className="w-6 h-6 text-gray-400" />
-          <span className="text-sm text-gray-400">Vybrat fotku</span>
+          className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[var(--ds-border)] bg-[var(--ds-sand-50)] hover:border-[var(--ds-forest-lt)] hover:bg-[var(--ds-forest-wash)] transition-colors disabled:opacity-50 py-8">
+          <Camera className="w-6 h-6 text-[var(--ds-ink-4)]" />
+          <span className="text-sm text-[var(--ds-ink-4)]">Vybrat fotku</span>
         </button>
       )}
       <input ref={ref} type="file" accept="image/*" className="hidden" disabled={disabled}
@@ -125,19 +125,19 @@ function TeamsTab({ teams, onRefresh }: { teams: Team[]; onRefresh: () => void }
     <div className="flex flex-col gap-6">
 
       {/* Team list */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-100">
-          <h2 className="font-semibold text-gray-900 text-sm">Týmy ({teams.length})</h2>
+      <div className="bg-white border border-[var(--ds-border)] rounded-[18px] shadow-sm overflow-hidden mb-5">
+        <div className="px-4 py-3.5 text-[13px] font-bold text-[var(--ds-ink-3)] border-b border-[var(--ds-border)] bg-[var(--ds-sand-50)]">
+          Týmy ({teams.length})
         </div>
         {teams.length === 0 ? (
-          <p className="text-center py-10 text-gray-400 text-sm">Žádné týmy</p>
+          <p className="text-center py-10 text-[var(--ds-ink-4)] text-sm">Žádné týmy</p>
         ) : (
           teams.map(team => {
             return (
-              <div key={team.id} className="flex items-center gap-3 px-4 py-3.5 border-b last:border-0 border-gray-50">
+              <div key={team.id} className="flex items-center gap-3 px-4 py-3.5 border-b last:border-0 border-[var(--ds-border)] hover:bg-[var(--ds-sand-50)]">
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-900 text-[15px]">{team.name}</p>
-                  <p className="text-xs text-gray-400 font-mono truncate">{team.auth_user_id}</p>
+                  <p className="font-semibold text-[var(--ds-ink)] text-[15px]">{team.name}</p>
+                  <p className="text-xs text-[var(--ds-ink-4)] font-mono truncate">{team.auth_user_id}</p>
                 </div>
                 <button
                   onClick={() => handleDelete(team)}
@@ -154,39 +154,39 @@ function TeamsTab({ teams, onRefresh }: { teams: Team[]; onRefresh: () => void }
       </div>
 
       {/* Create team form */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-        <h2 className="font-bold text-gray-900 mb-4">Přidat tým</h2>
+      <div className="bg-white border border-[var(--ds-border)] rounded-[24px] shadow-sm p-6 mb-5">
+        <h2 className="text-[16px] font-bold text-[var(--ds-ink)] mb-5">Přidat tým</h2>
         <form onSubmit={handleCreate} className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-gray-700">Název týmu<span className="text-red-500 ml-0.5">*</span></label>
+            <label className="text-[13px] font-semibold text-[var(--ds-ink-2)] mb-1.5">Název týmu<span className="text-red-500 ml-0.5">*</span></label>
             <input
               value={name} onChange={e => setName(e.target.value)} required disabled={creating}
               placeholder="Tým Hlučín"
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition disabled:opacity-50"
+              className="w-full rounded-xl border-[1.5px] border-[var(--ds-border)] px-4 h-[50px] text-[16px] text-[var(--ds-ink)] outline-none focus:border-[var(--ds-forest-lt)] focus:shadow-[0_0_0_3px_var(--ds-forest-wash)] transition disabled:opacity-50"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-gray-700">Uživatelské jméno<span className="text-red-500 ml-0.5">*</span></label>
+              <label className="text-[13px] font-semibold text-[var(--ds-ink-2)] mb-1.5">Uživatelské jméno<span className="text-red-500 ml-0.5">*</span></label>
               <input
                 value={username} onChange={e => setUsername(e.target.value)} required disabled={creating}
                 placeholder="hlucin-duo"
-                className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition disabled:opacity-50"
+                className="w-full rounded-xl border-[1.5px] border-[var(--ds-border)] px-4 h-[50px] text-[16px] text-[var(--ds-ink)] outline-none focus:border-[var(--ds-forest-lt)] focus:shadow-[0_0_0_3px_var(--ds-forest-wash)] transition disabled:opacity-50"
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-gray-700">Heslo<span className="text-red-500 ml-0.5">*</span></label>
+              <label className="text-[13px] font-semibold text-[var(--ds-ink-2)] mb-1.5">Heslo<span className="text-red-500 ml-0.5">*</span></label>
               <input
                 type="password" value={password} onChange={e => setPassword(e.target.value)} required disabled={creating}
                 placeholder="••••••••"
-                className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition disabled:opacity-50"
+                className="w-full rounded-xl border-[1.5px] border-[var(--ds-border)] px-4 h-[50px] text-[16px] text-[var(--ds-ink)] outline-none focus:border-[var(--ds-forest-lt)] focus:shadow-[0_0_0_3px_var(--ds-forest-wash)] transition disabled:opacity-50"
               />
             </div>
           </div>
           {error && <p className="text-sm text-red-500">{error}</p>}
           {success && <p className="text-sm text-green-600 font-medium">{success}</p>}
           <button type="submit" disabled={creating}
-            className="w-full bg-blue-500 hover:bg-blue-600 disabled:opacity-60 text-white font-semibold rounded-xl py-3 text-sm transition-colors">
+            className="w-full bg-[var(--ds-forest)] hover:bg-[var(--ds-forest-mid)] disabled:opacity-60 text-white font-bold rounded-xl h-[52px] text-sm transition-colors shadow-[0_2px_8px_oklch(30%_0.10_148/0.25)]">
             {creating ? 'Vytvářím...' : 'Vytvořit tým'}
           </button>
         </form>
@@ -256,15 +256,15 @@ function AddCatchTab({ teams }: { teams: Team[] }) {
   const busy = status === 'compressing' || status === 'uploading'
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-      <h2 className="font-bold text-gray-900 mb-4">Přidat úlovek za tým</h2>
+    <div className="bg-white border border-[var(--ds-border)] rounded-[24px] shadow-sm p-6 mb-5">
+      <h2 className="text-[16px] font-bold text-[var(--ds-ink)] mb-5">Přidat úlovek za tým</h2>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
         {/* Team picker */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-gray-700">Tým<span className="text-red-500 ml-0.5">*</span></label>
+          <label className="text-[13px] font-semibold text-[var(--ds-ink-2)] mb-1.5">Tým<span className="text-red-500 ml-0.5">*</span></label>
           <select value={teamId} onChange={e => setTeamId(e.target.value)} disabled={busy} required
-            className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition disabled:opacity-50 bg-white">
+            className="w-full rounded-xl border-[1.5px] border-[var(--ds-border)] px-4 h-[50px] text-[16px] text-[var(--ds-ink)] outline-none focus:border-[var(--ds-forest-lt)] focus:shadow-[0_0_0_3px_var(--ds-forest-wash)] transition disabled:opacity-50 bg-white">
             <option value="">— Vyberte tým —</option>
             {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
@@ -272,11 +272,17 @@ function AddCatchTab({ teams }: { teams: Team[] }) {
 
         {/* Fish type */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-gray-700">Druh ryby</label>
+          <label className="text-[13px] font-semibold text-[var(--ds-ink-2)]">Druh ryby</label>
           <div className="grid grid-cols-2 gap-2">
             {(['Kapr', 'Amur'] as const).map(type => (
               <button key={type} type="button" onClick={() => setFishType(type)} disabled={busy}
-                className={`py-3 rounded-xl text-sm font-semibold border transition-colors ${fishType === type ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'}`}>
+                className={`h-[52px] rounded-xl text-sm font-semibold border transition-colors ${
+                  fishType === type
+                    ? type === 'Kapr'
+                      ? 'bg-[var(--ds-forest)] text-white border-[var(--ds-forest)] shadow-[0_2px_8px_oklch(30%_0.10_148/0.30)]'
+                      : 'bg-[oklch(45%_0.10_55)] text-white border-[oklch(45%_0.10_55)] shadow-[0_2px_8px_oklch(45%_0.10_55/0.30)]'
+                    : 'bg-white text-[var(--ds-ink-3)] border-[var(--ds-border)] hover:border-[var(--ds-border-strong)]'
+                }`}>
                 {type}
               </button>
             ))}
@@ -286,16 +292,16 @@ function AddCatchTab({ teams }: { teams: Team[] }) {
         {/* Weight + length */}
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-gray-700">Váha (kg)<span className="text-red-500 ml-0.5">*</span></label>
+            <label className="text-[13px] font-semibold text-[var(--ds-ink-2)] mb-1.5">Váha (kg)<span className="text-red-500 ml-0.5">*</span></label>
             <input type="number" min="0" max="100" step="0.001" value={weightKg} onChange={e => setWeightKg(e.target.value)}
               placeholder="např. 27" disabled={busy}
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition disabled:opacity-50" />
+              className="w-full rounded-xl border-[1.5px] border-[var(--ds-border)] px-4 h-[50px] text-[16px] text-[var(--ds-ink)] outline-none focus:border-[var(--ds-forest-lt)] focus:shadow-[0_0_0_3px_var(--ds-forest-wash)] transition disabled:opacity-50" />
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-gray-700">Délka (cm)</label>
+            <label className="text-[13px] font-semibold text-[var(--ds-ink-2)]">Délka (cm)</label>
             <input type="number" min="0" step="0.1" value={lengthCm} onChange={e => setLengthCm(e.target.value)}
               placeholder="např. 30" disabled={busy}
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition disabled:opacity-50" />
+              className="w-full rounded-xl border-[1.5px] border-[var(--ds-border)] px-4 h-[50px] text-[16px] text-[var(--ds-ink)] outline-none focus:border-[var(--ds-forest-lt)] focus:shadow-[0_0_0_3px_var(--ds-forest-wash)] transition disabled:opacity-50" />
           </div>
         </div>
 
@@ -307,13 +313,13 @@ function AddCatchTab({ teams }: { teams: Team[] }) {
 
         {error && <p className="text-sm text-red-500">{error}</p>}
         {status === 'compressing' && (
-          <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 px-3 py-2 rounded-xl">
+          <div className="flex items-center gap-2 text-sm text-[var(--ds-forest-lt)] bg-[var(--ds-forest-pale)] px-3 py-2 rounded-xl">
             <span className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin shrink-0" />
             Komprimuji fotky...
           </div>
         )}
         {status === 'uploading' && (
-          <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 px-3 py-2 rounded-xl">
+          <div className="flex items-center gap-2 text-sm text-[var(--ds-forest-lt)] bg-[var(--ds-forest-pale)] px-3 py-2 rounded-xl">
             <span className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin shrink-0" />
             Nahrávám...
           </div>
@@ -323,7 +329,7 @@ function AddCatchTab({ teams }: { teams: Team[] }) {
         )}
 
         <button type="submit" disabled={busy}
-          className="w-full bg-blue-500 hover:bg-blue-600 disabled:opacity-60 text-white font-semibold rounded-xl py-3 text-sm transition-colors">
+          className="w-full bg-[var(--ds-forest)] hover:bg-[var(--ds-forest-mid)] disabled:opacity-60 text-white font-bold rounded-xl h-[52px] text-sm transition-colors shadow-[0_2px_8px_oklch(30%_0.10_148/0.25)]">
           {busy ? 'Ukládám...' : 'Uložit úlovek'}
         </button>
       </form>
@@ -365,29 +371,29 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-400 text-sm">Načítám...</p>
+      <div className="min-h-screen bg-[var(--ds-bg)] flex items-center justify-center">
+        <p className="text-[var(--ds-ink-4)] text-sm">Načítám...</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[var(--ds-bg)]">
 
       {/* Navbar */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      <header className="bg-[var(--ds-forest)] border-b border-[oklch(100%_0_0/0.08)] shadow-[0_2px_12px_oklch(16%_0.02_80/0.18)] sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
             <Image src="/image.png" alt="Hlučín Top 3" width={32} height={32} className="rounded-lg shrink-0" />
-            <span className="font-bold text-gray-900 text-base">Admin</span>
+            <span className="font-bold text-white text-base">Admin</span>
           </Link>
           <div className="flex items-center gap-3">
-            <Link href="/" className="text-sm font-semibold text-gray-500 hover:text-gray-800 transition-colors">
+            <Link href="/" className="text-sm font-semibold text-[oklch(100%_0_0/0.70)] hover:text-white transition-colors">
               Výsledky
             </Link>
             <button
               onClick={async () => { await supabase.auth.signOut(); router.push('/') }}
-              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+              className="flex items-center gap-1.5 text-xs text-[oklch(100%_0_0/0.55)] hover:text-white transition-colors"
             >
               <LogOut className="w-4 h-4" />
               Odhlásit
@@ -399,10 +405,10 @@ export default function AdminPage() {
       <main className="max-w-2xl mx-auto px-4 py-6 flex flex-col gap-4">
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
+        <div className="flex gap-1 bg-white border border-[var(--ds-border)] rounded-xl p-1 shadow-sm mb-6">
           {([['teams', 'Týmy'], ['catch', 'Přidat úlovek']] as [Tab, string][]).map(([key, label]) => (
             <button key={key} onClick={() => setTab(key)}
-              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${tab === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+              className={`flex-1 h-10 rounded-lg font-semibold text-sm transition-all ${tab === key ? 'bg-[var(--ds-forest)] text-white shadow-sm' : 'bg-transparent text-[var(--ds-ink-3)] hover:bg-[var(--ds-sand-100)] hover:text-[var(--ds-ink)]'}`}>
               {label}
             </button>
           ))}

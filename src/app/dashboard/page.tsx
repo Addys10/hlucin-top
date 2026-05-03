@@ -48,11 +48,11 @@ function PhotoPicker({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-sm font-medium text-gray-700">
+      <label className="text-[13px] font-semibold text-[var(--ds-ink-2)]">
         {label}<span className="text-red-500 ml-0.5">*</span>
       </label>
       {preview ? (
-        <div className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-50" style={{ aspectRatio: '4/3' }}>
+        <div className="relative rounded-xl overflow-hidden border border-[var(--ds-border)] bg-[var(--ds-sand-50)]" style={{ aspectRatio: '4/3' }}>
           <Image src={preview} alt="Náhled" fill className="object-cover" />
           {!disabled && (
             <button
@@ -69,10 +69,10 @@ function PhotoPicker({
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={disabled}
-          className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 hover:border-blue-300 hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed py-8"
+          className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[var(--ds-border)] bg-[var(--ds-sand-50)] hover:border-[var(--ds-forest-lt)] hover:bg-[var(--ds-forest-wash)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed py-8"
         >
-          <Camera className="w-7 h-7 text-gray-400" />
-          <span className="text-sm text-gray-400">Vybrat fotku</span>
+          <Camera className="w-7 h-7 text-[var(--ds-ink-4)]" />
+          <span className="text-sm text-[var(--ds-ink-4)]">Vybrat fotku</span>
         </button>
       )}
       <input
@@ -95,8 +95,8 @@ function StatusBadge({ status }: { status: UploadStatus }) {
   const map: Record<UploadStatus, { label: string; color: string } | null> = {
     idle: null,
     error: null,
-    compressing: { label: 'Komprimuji fotky...', color: 'text-blue-600 bg-blue-50' },
-    uploading: { label: 'Nahrávám fotky...', color: 'text-blue-600 bg-blue-50' },
+    compressing: { label: 'Komprimuji fotky...', color: 'text-[var(--ds-forest-lt)] bg-[var(--ds-forest-pale)]' },
+    uploading: { label: 'Nahrávám fotky...', color: 'text-[var(--ds-forest-lt)] bg-[var(--ds-forest-pale)]' },
     done: { label: 'Úlovek uložen!', color: 'text-green-700 bg-green-50' },
   }
   const entry = map[status]
@@ -253,20 +253,20 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[var(--ds-bg)]">
 
       {/* Navbar */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      <header className="bg-[var(--ds-forest)] border-b border-[oklch(100%_0_0/0.08)] shadow-[0_2px_12px_oklch(16%_0.02_80/0.18)] sticky top-0 z-10">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
             <Image src="/image.png" alt="Hlučín Top 3" width={32} height={32} className="rounded-lg shrink-0" />
-            <span className="font-bold text-gray-900 text-base">HLUČÍN TOP 3</span>
+            <span className="font-bold text-white text-base">HLUČÍN TOP 3</span>
           </Link>
           <div className="flex items-center gap-3">
-            <Link href="/" className="text-sm font-semibold text-gray-500 hover:text-gray-800 transition-colors">
+            <Link href="/" className="text-sm font-semibold text-[oklch(100%_0_0/0.70)] hover:text-white transition-colors">
               Výsledky
             </Link>
-            <button onClick={handleLogout} className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors">
+            <button onClick={handleLogout} className="flex items-center gap-1.5 text-xs text-[oklch(100%_0_0/0.55)] hover:text-white transition-colors">
               <LogOut className="w-4 h-4" />
               Odhlásit
             </button>
@@ -277,20 +277,21 @@ export default function Dashboard() {
       <main className="max-w-lg mx-auto px-4 py-6 flex flex-col gap-4">
 
         {/* Team title */}
-        <div>
-          <p className="text-sm text-gray-400 font-medium">Tým</p>
-          <h1 className="text-2xl font-bold text-gray-900">{team?.name}</h1>
+        <div className="mb-1">
+          <p className="text-[11px] font-bold uppercase tracking-[0.09em] text-[var(--ds-ink-4)]">Přihlášen jako</p>
+          <h1 className="text-[28px] font-extrabold tracking-tight text-[var(--ds-ink)] leading-tight">{team?.name}</h1>
+          <div className="h-[3px] w-9 bg-[var(--ds-forest-lt)] rounded-full mt-2.5" />
         </div>
 
         {/* Catch form */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-          <h2 className="font-bold text-gray-900 mb-4">Přidat úlovek</h2>
+        <div className="bg-white border border-[var(--ds-border)] rounded-[24px] shadow-[0_1px_3px_oklch(16%_0.02_80/0.07),0_1px_2px_oklch(16%_0.02_80/0.04)] p-6 mb-4">
+          <h2 className="text-[16px] font-bold text-[var(--ds-ink)] mb-5">Přidat úlovek</h2>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
             {/* Fish type */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-gray-700">Druh ryby</label>
+              <label className="text-[13px] font-semibold text-[var(--ds-ink-2)]">Druh ryby</label>
               <div className="grid grid-cols-2 gap-2">
                 {(['Kapr', 'Amur'] as const).map(type => (
                   <button
@@ -298,10 +299,12 @@ export default function Dashboard() {
                     type="button"
                     onClick={() => setFishType(type)}
                     disabled={submitting}
-                    className={`py-3 rounded-xl text-sm font-semibold border transition-colors ${
+                    className={`h-[52px] rounded-xl text-sm font-semibold border transition-colors ${
                       fishType === type
-                        ? 'bg-blue-500 text-white border-blue-500'
-                        : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'
+                        ? type === 'Kapr'
+                          ? 'bg-[var(--ds-forest)] text-white border-[var(--ds-forest)] shadow-[0_2px_8px_oklch(30%_0.10_148/0.30)]'
+                          : 'bg-[oklch(45%_0.10_55)] text-white border-[oklch(45%_0.10_55)] shadow-[0_2px_8px_oklch(45%_0.10_55/0.30)]'
+                        : 'bg-white text-[var(--ds-ink-3)] border-[var(--ds-border)] hover:border-[var(--ds-border-strong)]'
                     }`}
                   >
                     {type}
@@ -313,7 +316,7 @@ export default function Dashboard() {
             {/* Weight + length */}
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-gray-700">
+                <label className="text-[13px] font-semibold text-[var(--ds-ink-2)]">
                   Váha (kg)<span className="text-red-500 ml-0.5">*</span>
                 </label>
                 <input
@@ -325,11 +328,11 @@ export default function Dashboard() {
                   onChange={e => setWeightKg(e.target.value)}
                   placeholder="např. 27"
                   disabled={submitting}
-                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition disabled:opacity-50"
+                  className="w-full rounded-xl border-[1.5px] border-[var(--ds-border)] px-4 h-[50px] text-[16px] text-[var(--ds-ink)] outline-none focus:border-[var(--ds-forest-lt)] focus:shadow-[0_0_0_3px_var(--ds-forest-wash)] transition disabled:opacity-50"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-gray-700">Délka (cm)</label>
+                <label className="text-[13px] font-semibold text-[var(--ds-ink-2)]">Délka (cm)</label>
                 <input
                   type="number"
                   min="0"
@@ -338,7 +341,7 @@ export default function Dashboard() {
                   onChange={e => setLengthCm(e.target.value)}
                   placeholder="např. 30"
                   disabled={submitting}
-                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition disabled:opacity-50"
+                  className="w-full rounded-xl border-[1.5px] border-[var(--ds-border)] px-4 h-[50px] text-[16px] text-[var(--ds-ink)] outline-none focus:border-[var(--ds-forest-lt)] focus:shadow-[0_0_0_3px_var(--ds-forest-wash)] transition disabled:opacity-50"
                 />
               </div>
             </div>
@@ -367,7 +370,7 @@ export default function Dashboard() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-blue-500 hover:bg-blue-600 disabled:opacity-60 text-white font-semibold rounded-xl py-3 text-sm transition-colors"
+              className="w-full bg-[var(--ds-forest)] hover:bg-[var(--ds-forest-mid)] disabled:opacity-60 text-white font-semibold rounded-xl py-3 text-sm transition-colors shadow-[0_2px_8px_oklch(30%_0.10_148/0.25)] hover:shadow-[0_4px_14px_oklch(30%_0.10_148/0.35)] hover:-translate-y-px active:translate-y-0"
             >
               {submitting ? 'Ukládám...' : 'Uložit úlovek'}
             </button>
@@ -375,23 +378,23 @@ export default function Dashboard() {
         </div>
 
         {/* Catches list */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100">
-            <h2 className="font-semibold text-gray-900 text-sm">Vaše úlovky</h2>
+        <div className="bg-white border border-[var(--ds-border)] rounded-[18px] shadow-[0_1px_3px_oklch(16%_0.02_80/0.07)] overflow-hidden">
+          <div className="px-4 py-3 border-b border-[var(--ds-border)] bg-[var(--ds-sand-50)]">
+            <h2 className="text-[13px] font-bold text-[var(--ds-ink-3)]">Vaše úlovky</h2>
           </div>
 
           {catches.length === 0 ? (
             <div className="text-center py-12 text-gray-400 text-sm">Zatím žádné úlovky</div>
           ) : (
             catches.map((c, i) => (
-              <div key={c.id} className="flex items-center gap-3 px-4 py-3.5 border-b last:border-0 border-gray-50">
-                <div className="w-6 text-center text-xs text-gray-300 font-mono shrink-0">#{catches.length - i}</div>
+              <div key={c.id} className="flex items-center gap-3 px-4 py-3.5 border-b last:border-0 border-[var(--ds-border)]">
+                <div className="w-6 text-center text-[11px] text-[var(--ds-ink-4)] font-mono shrink-0">#{catches.length - i}</div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-900 text-[15px]">{c.fish_type}</p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-[15px] font-bold text-[var(--ds-ink)]">{c.fish_type}</p>
+                  <p className="text-[12px] text-[var(--ds-ink-4)]">
                     {c.length_mm ? `${c.length_mm} mm · ` : ''}{new Date(c.created_at).toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </p>
-                  <span className="font-mono font-bold text-gray-800 tabular-nums text-[15px]">
+                  <span className="text-[17px] font-extrabold font-mono text-[var(--ds-ink)] tabular-nums">
                     {(c.weight_g / 1000).toFixed(2)} kg
                   </span>
                 </div>
@@ -401,12 +404,12 @@ export default function Dashboard() {
                       key={pi}
                       type="button"
                       onClick={() => setLightbox(url)}
-                      className="w-9 h-9 rounded-lg overflow-hidden border border-gray-100 shrink-0 hover:opacity-80 transition-opacity"
+                      className="w-9 h-9 rounded-lg overflow-hidden border border-[var(--ds-border)] shrink-0 hover:opacity-80 transition-opacity"
                     >
                       <Image src={url} alt={`Fotka ${pi + 1}`} width={36} height={36} className="object-cover w-full h-full" />
                     </button>
                   ) : (
-                    <div key={pi} className="w-9 h-9 rounded-lg bg-gray-100 text-gray-300 flex items-center justify-center shrink-0">
+                    <div key={pi} className="w-9 h-9 rounded-lg bg-[var(--ds-sand-100)] text-[var(--ds-ink-5)] flex items-center justify-center shrink-0">
                       <Fish className="w-4 h-4" />
                     </div>
                   ))}
