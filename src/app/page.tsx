@@ -209,7 +209,7 @@ function TeamDetail({ team }: { team: TeamScore }) {
                       onClick={() => setLightbox(url!)}
                       className="w-9 h-9 rounded-lg overflow-hidden border border-[var(--ds-border)] shrink-0 active:opacity-70"
                     >
-                      <Image src={url!} alt="foto" width={36} height={36} className="object-cover w-full h-full" />
+                      <Image src={url!} alt="foto" width={36} height={36} className="object-cover" />
                     </button>
                   ))}
                 </div>
@@ -447,7 +447,7 @@ export default function Leaderboard() {
 
       {/* Team detail dialog */}
       <Dialog open={!!selectedTeam} onOpenChange={open => { if (!open) setSelectedTeam(null) }}>
-        <DialogContent className="p-0 gap-0 w-full h-[100dvh] max-w-none sm:max-w-2xl sm:h-[90vh] rounded-none sm:rounded-2xl overflow-y-auto" showCloseButton={false}>
+        <DialogContent className="p-0 gap-0 w-full h-[100dvh] max-w-none sm:max-w-2xl sm:h-[90vh] rounded-none sm:rounded-2xl overflow-y-auto" showCloseButton={false} aria-describedby={undefined}>
           {/* Sticky header */}
           <div className="flex items-center gap-3 px-4 h-14 border-b border-[var(--ds-border)] bg-white sticky top-0 z-10">
             <button

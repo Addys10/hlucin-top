@@ -406,7 +406,7 @@ export default function Dashboard() {
                       onClick={() => setLightbox(url)}
                       className="w-9 h-9 rounded-lg overflow-hidden border border-[var(--ds-border)] shrink-0 hover:opacity-80 transition-opacity"
                     >
-                      <Image src={url} alt={`Fotka ${pi + 1}`} width={36} height={36} className="object-cover w-full h-full" />
+                      <Image src={url} alt={`Fotka ${pi + 1}`} width={36} height={36} className="object-cover" />
                     </button>
                   ) : (
                     <div key={pi} className="w-9 h-9 rounded-lg bg-[var(--ds-sand-100)] text-[var(--ds-ink-5)] flex items-center justify-center shrink-0">
