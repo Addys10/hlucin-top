@@ -319,22 +319,22 @@ export default function Leaderboard() {
             <div className="flex items-center gap-2">
               {session && teamName && (
                 <>
-                  <div className="flex flex-col items-end">
+                  <div className="hidden sm:flex flex-col items-end shrink-0 max-w-[160px]">
                     <span className="text-[11px] text-[oklch(100%_0_0/0.65)] leading-tight">Přihlášen jako</span>
-                    <span className="text-sm font-semibold text-white leading-tight">{teamName}</span>
+                    <span className="text-sm font-semibold text-white leading-tight truncate w-full text-right">{teamName}</span>
                   </div>
-                  <div className="w-px h-5 bg-[oklch(100%_0_0/0.15)] mx-1" />
+                  <div className="hidden sm:block w-px h-5 bg-[oklch(100%_0_0/0.15)] mx-1" />
                   {isAdmin && (
                     <Link
                       href="/admin"
-                      className="text-sm font-semibold text-[var(--ds-forest)] bg-white hover:bg-[var(--ds-sand-100)] transition-colors px-4 py-2 rounded-lg"
+                      className="text-sm font-semibold text-[var(--ds-forest)] bg-white hover:bg-[var(--ds-sand-100)] transition-colors px-3 py-2 rounded-lg"
                     >
                       Admin
                     </Link>
                   )}
                   <Link
                     href="/dashboard"
-                    className="text-sm font-semibold text-white bg-[oklch(100%_0_0/0.15)] hover:bg-[oklch(100%_0_0/0.22)] transition-colors px-4 py-2 rounded-lg"
+                    className="text-sm font-semibold text-white bg-[oklch(100%_0_0/0.15)] hover:bg-[oklch(100%_0_0/0.22)] transition-colors px-3 py-2 rounded-lg"
                   >
                     Úlovky
                   </Link>

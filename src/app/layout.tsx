@@ -18,7 +18,6 @@ const dmMono = DM_Mono({
 export const metadata: Metadata = {
   title: "Hlučín TOP 3",
   description: "Rybářské závody",
-  icons: { icon: "/image.png" },
 };
 
 export default function RootLayout({
