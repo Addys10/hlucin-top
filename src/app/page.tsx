@@ -25,6 +25,8 @@ type CatchDetail = {
   weight_g: number
   length_mm: number
   created_at: string
+  photo_url_1?: string | null
+  photo_url_2?: string | null
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -98,12 +100,13 @@ function BarChart({ catches }: { catches: CatchDetail[] }) {
 function TeamDetail({ team }: { team: TeamScore }) {
   const [catches, setCatches] = useState<CatchDetail[]>([])
   const [loading, setLoading] = useState(true)
+  const [lightbox, setLightbox] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
       const { data } = await supabase
         .from('catches')
-        .select('id, fish_type, weight_g, length_mm, created_at')
+        .select('id, fish_type, weight_g, length_mm, created_at, photo_url_1, photo_url_2')
         .eq('team_id', team.id)
         .order('weight_g', { ascending: false })
       setCatches(data ?? [])
@@ -170,7 +173,7 @@ function TeamDetail({ team }: { team: TeamScore }) {
         ) : catches.length === 0 ? (
           <div className="text-center py-12 text-gray-400 text-sm">Zatím žádné úlovky</div>
         ) : (
-          catches.map((c, i) => {
+          catches.map((c) => {
             const isTop3 = top3Ids.includes(c.id)
             return (
               <div
@@ -190,12 +193,43 @@ function TeamDetail({ team }: { team: TeamScore }) {
                   <span className="font-mono font-bold text-gray-800 tabular-nums">{(c.weight_g / 1000).toFixed(3)} kg</span>
                   {isTop3 && <p className="text-[10px] text-blue-500 font-semibold">TOP 3</p>}
                 </div>
-                <div className="w-6 text-center text-xs text-gray-300 font-mono">#{i + 1}</div>
+                <div className="flex gap-1 shrink-0">
+                  {[c.photo_url_1, c.photo_url_2].filter(Boolean).map((url, pi) => (
+                    <button
+                      key={pi}
+                      onClick={() => setLightbox(url!)}
+                      className="w-9 h-9 rounded-lg overflow-hidden border border-gray-200 shrink-0 active:opacity-70"
+                    >
+                      <Image src={url!} alt="foto" width={36} height={36} className="object-cover w-full h-full" />
+                    </button>
+                  ))}
+                </div>
               </div>
             )
           })
         )}
       </div>
+
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <Image
+            src={lightbox}
+            alt="foto"
+            fill
+            className="object-contain"
+            onClick={e => e.stopPropagation()}
+          />
+          <button
+            onClick={() => setLightbox(null)}
+            className="absolute top-4 right-4 text-white/70 hover:text-white text-3xl leading-none"
+          >
+            ×
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -216,22 +250,31 @@ export default function Leaderboard() {
   const [loading, setLoading] = useState(true)
   const [updatedAt, setUpdatedAt] = useState<Date>(new Date())
   const [selectedTeam, setSelectedTeam] = useState<TeamScore | null>(null)
-  const [teamName, setTeamName] = useState<string | null | undefined>(undefined)
+  const [session, setSession] = useState<{ userId: string } | null | undefined>(undefined)
+  const [teamName, setTeamName] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
     async function load() {
       const { data: { session } } = await supabase.auth.getSession()
 
       const [{ data: teams }, { data: catches }] = await Promise.all([
-        supabase.from('teams').select('id, name, auth_user_id').eq('is_admin', false),
+        supabase.from('teams').select('id, name, auth_user_id'),
         supabase.from('catches').select('id, team_id, weight_g, fish_type'),
       ])
 
-      if (session?.user && teams) {
-        const mine = teams.find(t => t.auth_user_id === session.user.id)
-        setTeamName(mine?.name ?? null)
+      if (session?.user) {
+        setSession({ userId: session.user.id })
+        const { data: myTeam } = await supabase
+          .from('teams')
+          .select('name, is_admin')
+          .eq('auth_user_id', session.user.id)
+          .single()
+        setIsAdmin(myTeam?.is_admin ?? false)
+        setTeamName(myTeam?.name ?? null)
       } else {
-        setTeamName(null)
+        setSession(null)
+        setIsAdmin(false)
       }
       if (teams && catches) {
         setScores(calculateScores(teams, catches))
@@ -274,21 +317,33 @@ export default function Leaderboard() {
           </div>
 
           {/* Right: auth */}
-          {teamName === undefined ? null : teamName ? (
+          {session === undefined ? null : session ? (
             <div className="flex items-center gap-2">
-              <div className="flex flex-col items-end">
-                <span className="text-[11px] text-gray-400 leading-tight">Přihlášen jako</span>
-                <span className="text-sm font-semibold text-gray-800 leading-tight">{teamName}</span>
-              </div>
-              <div className="w-px h-6 bg-gray-200 mx-1" />
-              <Link
-                href="/dashboard"
-                className="text-sm font-semibold text-white bg-blue-500 hover:bg-blue-600 transition-colors px-4 py-2 rounded-xl"
-              >
-                Úlovky
-              </Link>
+              {session && teamName && (
+                <>
+                  <div className="flex flex-col items-end">
+                    <span className="text-[11px] text-gray-400 leading-tight">Přihlášen jako</span>
+                    <span className="text-sm font-semibold text-gray-800 leading-tight">{teamName}</span>
+                  </div>
+                  <div className="w-px h-6 bg-gray-200 mx-1" />
+                  {isAdmin && (
+                    <Link
+                      href="/admin"
+                      className="text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors px-4 py-2 rounded-xl"
+                    >
+                      Admin
+                    </Link>
+                  )}
+                  <Link
+                    href="/dashboard"
+                    className="text-sm font-semibold text-white bg-blue-500 hover:bg-blue-600 transition-colors px-4 py-2 rounded-xl"
+                  >
+                    Úlovky
+                  </Link>
+                </>
+              )}
               <button
-                onClick={async () => { await supabase.auth.signOut(); setTeamName(null) }}
+                onClick={async () => { await supabase.auth.signOut(); setSession(null); setTeamName(null); setIsAdmin(false) }}
                 className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
                 title="Odhlásit se"
               >

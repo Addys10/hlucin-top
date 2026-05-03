@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -17,10 +17,11 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
 
+    const email = `${username.trim().toLowerCase()}@hlucin.local`
     const { error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
-      setError('Nesprávný email nebo heslo.')
+      setError('Nesprávné uživatelské jméno nebo heslo.')
       setLoading(false)
       return
     }
@@ -42,16 +43,16 @@ export default function LoginPage() {
         {/* Form */}
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-gray-700" htmlFor="email">Email</label>
+            <label className="text-sm font-medium text-gray-700" htmlFor="username">Uživatelské jméno</label>
             <input
-              id="email"
-              type="email"
-              autoComplete="email"
+              id="username"
+              type="text"
+              autoComplete="username"
               required
-              value={email}
-              onChange={e => setEmail(e.target.value)}
+              value={username}
+              onChange={e => setUsername(e.target.value)}
               className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-              placeholder="vas@email.cz"
+              placeholder="hlucin-duo"
             />
           </div>
 

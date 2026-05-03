@@ -1,14 +1,115 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Fish, LogOut } from 'lucide-react'
+import { Camera, Fish, LogOut, X } from 'lucide-react'
+import imageCompression from 'browser-image-compression'
 import { supabase } from '@/lib/supabase'
 
 type Team = { id: string; name: string }
-type Catch = { id: string; fish_type: string; weight_g: number; length_mm: number; created_at: string }
+type Catch = { id: string; fish_type: string; weight_g: number; length_mm: number; created_at: string; photo_url_1?: string; photo_url_2?: string }
+
+type UploadStatus = 'idle' | 'compressing' | 'uploading' | 'done' | 'error'
+
+async function compressImage(file: File): Promise<File> {
+  return imageCompression(file, { maxSizeMB: 0.5, maxWidthOrHeight: 1920, useWebWorker: true })
+}
+
+async function uploadWithRetry(file: File, path: string, attempts = 3): Promise<string> {
+  for (let i = 0; i < attempts; i++) {
+    const { data, error } = await supabase.storage
+      .from('catches')
+      .upload(path, file, { upsert: true, contentType: file.type })
+    if (!error && data) {
+      const { data: { publicUrl } } = supabase.storage.from('catches').getPublicUrl(data.path)
+      return publicUrl
+    }
+    if (i < attempts - 1) await new Promise(r => setTimeout(r, 1200 * (i + 1)))
+  }
+  throw new Error('Nahrávání fotky selhalo i po opakovaných pokusech.')
+}
+
+function PhotoPicker({
+  label,
+  preview,
+  onChange,
+  onClear,
+  disabled,
+}: {
+  label: string
+  preview: string | null
+  onChange: (file: File) => void
+  onClear: () => void
+  disabled: boolean
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-sm font-medium text-gray-700">
+        {label}<span className="text-red-500 ml-0.5">*</span>
+      </label>
+      {preview ? (
+        <div className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-50" style={{ aspectRatio: '4/3' }}>
+          <Image src={preview} alt="Náhled" fill className="object-cover" />
+          {!disabled && (
+            <button
+              type="button"
+              onClick={onClear}
+              className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={disabled}
+          className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 hover:border-blue-300 hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed py-8"
+        >
+          <Camera className="w-7 h-7 text-gray-400" />
+          <span className="text-sm text-gray-400">Vybrat fotku</span>
+        </button>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        disabled={disabled}
+        onChange={e => {
+          const file = e.target.files?.[0]
+          if (file) onChange(file)
+          e.target.value = ''
+        }}
+      />
+    </div>
+  )
+}
+
+function StatusBadge({ status }: { status: UploadStatus }) {
+  const map: Record<UploadStatus, { label: string; color: string } | null> = {
+    idle: null,
+    error: null,
+    compressing: { label: 'Komprimuji fotky...', color: 'text-blue-600 bg-blue-50' },
+    uploading: { label: 'Nahrávám fotky...', color: 'text-blue-600 bg-blue-50' },
+    done: { label: 'Úlovek uložen!', color: 'text-green-700 bg-green-50' },
+  }
+  const entry = map[status]
+  if (!entry) return null
+  return (
+    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium ${entry.color}`}>
+      {(status === 'compressing' || status === 'uploading') && (
+        <span className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin shrink-0" />
+      )}
+      {entry.label}
+    </div>
+  )
+}
 
 export default function Dashboard() {
   const router = useRouter()
@@ -17,11 +118,16 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
+  const [uploadStatus, setUploadStatus] = useState<UploadStatus>('idle')
 
   const [fishType, setFishType] = useState<'Kapr' | 'Amur'>('Kapr')
   const [weightKg, setWeightKg] = useState('')
   const [lengthCm, setLengthCm] = useState('')
+  const [photo1File, setPhoto1File] = useState<File | null>(null)
+  const [photo2File, setPhoto2File] = useState<File | null>(null)
+  const [preview1, setPreview1] = useState<string | null>(null)
+  const [preview2, setPreview2] = useState<string | null>(null)
+  const [lightbox, setLightbox] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -39,7 +145,7 @@ export default function Dashboard() {
 
       const { data: catchData } = await supabase
         .from('catches')
-        .select('id, fish_type, weight_g, length_mm, created_at')
+        .select('id, fish_type, weight_g, length_mm, created_at, photo_url_1, photo_url_2')
         .eq('team_id', teamData.id)
         .order('created_at', { ascending: false })
 
@@ -49,23 +155,29 @@ export default function Dashboard() {
     load()
   }, [router])
 
+  function setPhoto(slot: 1 | 2, file: File) {
+    const url = URL.createObjectURL(file)
+    if (slot === 1) { setPhoto1File(file); setPreview1(url) }
+    else { setPhoto2File(file); setPreview2(url) }
+  }
+
+  function clearPhoto(slot: 1 | 2) {
+    if (slot === 1) { setPhoto1File(null); if (preview1) URL.revokeObjectURL(preview1); setPreview1(null) }
+    else { setPhoto2File(null); if (preview2) URL.revokeObjectURL(preview2); setPreview2(null) }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!team) return
     setError('')
-    setSuccess(false)
+    setUploadStatus('idle')
     setSubmitting(true)
 
     const weight_g = Math.round(parseFloat(weightKg) * 1000)
     const length_mm = lengthCm ? Math.round(parseFloat(lengthCm) * 10) : null
 
-    if (!weightKg || isNaN(weight_g)) {
-      setError('Zadejte váhu.')
-      setSubmitting(false)
-      return
-    }
-    if (weight_g <= 0) {
-      setError('Váha musí být větší než 0.')
+    if (!weightKg || isNaN(weight_g) || weight_g <= 0) {
+      setError('Zadejte platnou váhu.')
       setSubmitting(false)
       return
     }
@@ -79,27 +191,52 @@ export default function Dashboard() {
       setSubmitting(false)
       return
     }
-
-    const { data, error } = await supabase.from('catches').insert({
-      team_id: team.id,
-      fish_type: fishType.trim(),
-      weight_g,
-      length_mm,
-    }).select().single()
-
-    if (error) {
-      setError('Nepodařilo se uložit úlovek. Zkuste to znovu.')
+    if (!photo1File || !photo2File) {
+      setError('Obě fotky jsou povinné.')
       setSubmitting(false)
       return
     }
 
-    setCatches(prev => [data, ...prev])
-    setFishType('Kapr')
-    setWeightKg('')
-    setLengthCm('')
-    setSuccess(true)
-    setTimeout(() => setSuccess(false), 3000)
-    setSubmitting(false)
+    try {
+      setUploadStatus('compressing')
+      const timestamp = Date.now()
+      const [compressed1, compressed2] = await Promise.all([
+        compressImage(photo1File),
+        compressImage(photo2File),
+      ])
+
+      setUploadStatus('uploading')
+      const ext = (f: File) => f.type === 'image/png' ? 'png' : 'jpg'
+      const [photo_url_1, photo_url_2] = await Promise.all([
+        uploadWithRetry(compressed1, `${team.id}/${timestamp}_1.${ext(compressed1)}`),
+        uploadWithRetry(compressed2, `${team.id}/${timestamp}_2.${ext(compressed2)}`),
+      ])
+
+      const { data, error: insertError } = await supabase.from('catches').insert({
+        team_id: team.id,
+        fish_type: fishType,
+        weight_g,
+        length_mm,
+        photo_url_1,
+        photo_url_2,
+      }).select().single()
+
+      if (insertError) throw new Error('Nepodařilo se uložit úlovek.')
+
+      setCatches(prev => [data, ...prev])
+      setFishType('Kapr')
+      setWeightKg('')
+      setLengthCm('')
+      clearPhoto(1)
+      clearPhoto(2)
+      setUploadStatus('done')
+      setTimeout(() => setUploadStatus('idle'), 3000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Chyba při ukládání. Zkuste to znovu.')
+      setUploadStatus('error')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   async function handleLogout() {
@@ -149,7 +286,9 @@ export default function Dashboard() {
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
           <h2 className="font-bold text-gray-900 mb-4">Přidat úlovek</h2>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+
+            {/* Fish type */}
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-gray-700">Druh ryby</label>
               <div className="grid grid-cols-2 gap-2">
@@ -158,6 +297,7 @@ export default function Dashboard() {
                     key={type}
                     type="button"
                     onClick={() => setFishType(type)}
+                    disabled={submitting}
                     className={`py-3 rounded-xl text-sm font-semibold border transition-colors ${
                       fishType === type
                         ? 'bg-blue-500 text-white border-blue-500'
@@ -170,9 +310,12 @@ export default function Dashboard() {
               </div>
             </div>
 
+            {/* Weight + length */}
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-gray-700">Váha (kg)</label>
+                <label className="text-sm font-medium text-gray-700">
+                  Váha (kg)<span className="text-red-500 ml-0.5">*</span>
+                </label>
                 <input
                   type="number"
                   min="0"
@@ -181,7 +324,8 @@ export default function Dashboard() {
                   value={weightKg}
                   onChange={e => setWeightKg(e.target.value)}
                   placeholder="např. 27"
-                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                  disabled={submitting}
+                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition disabled:opacity-50"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -193,18 +337,37 @@ export default function Dashboard() {
                   value={lengthCm}
                   onChange={e => setLengthCm(e.target.value)}
                   placeholder="např. 30"
-                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                  disabled={submitting}
+                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition disabled:opacity-50"
                 />
               </div>
             </div>
 
+            {/* Photos */}
+            <div className="grid grid-cols-2 gap-3">
+              <PhotoPicker
+                label="Fotka 1"
+                preview={preview1}
+                onChange={f => setPhoto(1, f)}
+                onClear={() => clearPhoto(1)}
+                disabled={submitting}
+              />
+              <PhotoPicker
+                label="Fotka 2"
+                preview={preview2}
+                onChange={f => setPhoto(2, f)}
+                onClear={() => clearPhoto(2)}
+                disabled={submitting}
+              />
+            </div>
+
             {error && <p className="text-sm text-red-500">{error}</p>}
-            {success && <p className="text-sm text-green-600 font-medium">Úlovek uložen!</p>}
+            <StatusBadge status={uploadStatus} />
 
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-blue-500 hover:bg-blue-600 disabled:opacity-60 text-white font-semibold rounded-xl py-3 text-sm transition-colors mt-1"
+              className="w-full bg-blue-500 hover:bg-blue-600 disabled:opacity-60 text-white font-semibold rounded-xl py-3 text-sm transition-colors"
             >
               {submitting ? 'Ukládám...' : 'Uložit úlovek'}
             </button>
@@ -222,23 +385,57 @@ export default function Dashboard() {
           ) : (
             catches.map((c, i) => (
               <div key={c.id} className="flex items-center gap-3 px-4 py-3.5 border-b last:border-0 border-gray-50">
-                <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center shrink-0">
-                  <Fish className="w-4 h-4" />
-                </div>
+                <div className="w-6 text-center text-xs text-gray-300 font-mono shrink-0">#{catches.length - i}</div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-gray-900 text-[15px]">{c.fish_type}</p>
-                  <p className="text-xs text-gray-400">{c.length_mm} mm · {new Date(c.created_at).toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                  <p className="text-xs text-gray-400">
+                    {c.length_mm ? `${c.length_mm} mm · ` : ''}{new Date(c.created_at).toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                  <span className="font-mono font-bold text-gray-800 tabular-nums text-[15px]">
+                    {(c.weight_g / 1000).toFixed(3)} kg
+                  </span>
                 </div>
-                <span className="font-mono font-bold text-gray-800 tabular-nums text-[15px]">
-                  {(c.weight_g / 1000).toFixed(3)} kg
-                </span>
-                <div className="w-6 text-center text-xs text-gray-300 font-mono">#{catches.length - i}</div>
+                <div className="flex gap-1.5 shrink-0">
+                  {[c.photo_url_1, c.photo_url_2].map((url, pi) => url ? (
+                    <button
+                      key={pi}
+                      type="button"
+                      onClick={() => setLightbox(url)}
+                      className="w-9 h-9 rounded-lg overflow-hidden border border-gray-100 shrink-0 hover:opacity-80 transition-opacity"
+                    >
+                      <Image src={url} alt={`Fotka ${pi + 1}`} width={36} height={36} className="object-cover w-full h-full" />
+                    </button>
+                  ) : (
+                    <div key={pi} className="w-9 h-9 rounded-lg bg-gray-100 text-gray-300 flex items-center justify-center shrink-0">
+                      <Fish className="w-4 h-4" />
+                    </div>
+                  ))}
+                </div>
               </div>
             ))
           )}
         </div>
 
       </main>
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+          onClick={() => setLightbox(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setLightbox(null)}
+            className="absolute top-4 right-4 text-white bg-white/10 hover:bg-white/20 rounded-full p-2 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <div className="relative w-full h-full" onClick={e => e.stopPropagation()}>
+            <Image src={lightbox} alt="Fotka" fill className="object-contain" onClick={() => setLightbox(null)} />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
