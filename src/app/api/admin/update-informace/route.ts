@@ -16,8 +16,7 @@ export async function POST(req: NextRequest) {
   const admin = createAdminClient()
   const { error } = await admin
     .from('page_content')
-    .update({ content, updated_at: new Date().toISOString() })
-    .eq('page', 'informace')
+    .upsert({ page: 'informace', content, updated_at: new Date().toISOString() })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
   return NextResponse.json({ ok: true })

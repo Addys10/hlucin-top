@@ -317,11 +317,11 @@ export default function Leaderboard() {
           {/* Left: logo + title */}
           <div className="flex items-center gap-2.5">
             <Image src="/image.png" alt="Hlučín Top 3" width={36} height={36} className="rounded-xl shrink-0" />
-            <p className="font-bold text-white text-sm">HLUČÍN TOP 3</p>
+            <p className="font-bold text-white text-sm hidden sm:block">HLUČÍN TOP 3</p>
           </div>
 
           {/* Right: auth */}
-          <Link href="/informace" className="text-sm font-semibold text-[oklch(100%_0_0/0.70)] hover:text-white transition-colors px-3 py-2 rounded-lg hidden sm:block">
+          <Link href="/informace" className="text-sm font-semibold text-[oklch(100%_0_0/0.70)] hover:text-white transition-colors px-3 py-2 rounded-lg">
             Informace
           </Link>
 

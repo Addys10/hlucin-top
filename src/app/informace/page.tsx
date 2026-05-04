@@ -84,7 +84,7 @@ function BulletList({ text }: { text: string }) {
 
 function EditSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="border border-[var(--ds-border)] rounded-[18px] overflow-hidden">
+    <div className="bg-white border border-[var(--ds-border)] rounded-[18px] overflow-hidden shadow-[0_1px_3px_oklch(16%_0.02_80/0.07)]">
       <div className="px-5 py-3 bg-[var(--ds-forest-pale)] border-b border-[var(--ds-border)]">
         <p className="text-[11px] font-bold uppercase tracking-[0.10em] text-[var(--ds-forest-lt)]">{title}</p>
       </div>
