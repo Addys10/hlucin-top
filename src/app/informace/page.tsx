@@ -185,7 +185,7 @@ export default function InformacePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--ds-bg)]">
+    <div className="min-h-screen">
 
       {/* Navbar */}
       <header className="bg-[var(--ds-forest)] border-b border-[oklch(100%_0_0/0.08)] shadow-[0_2px_12px_oklch(16%_0.02_80/0.18)] sticky top-0 z-10">
@@ -212,15 +212,15 @@ export default function InformacePage() {
         {/* Page title + edit toggle */}
         <div className="flex items-start justify-between gap-4 mb-2">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.10em] text-[var(--ds-forest-lt)] mb-1">Hlučín TOP 3 · 2026</p>
-            <h1 className="text-[28px] font-extrabold tracking-tight text-[var(--ds-ink)] leading-tight">Informace</h1>
-            <p className="text-sm text-[var(--ds-ink-3)] mt-1">Závody v lovu kaprů a amurů</p>
-            <div className="h-[3px] w-9 bg-[var(--ds-forest-lt)] rounded-full mt-3" />
+            <p className="text-[11px] font-bold uppercase tracking-[0.10em] text-[var(--ds-forest-pale)] mb-1">Hlučín TOP 3 · 2026</p>
+            <h1 className="text-[28px] font-extrabold tracking-tight text-white leading-tight">Informace</h1>
+            <p className="text-sm text-white/60 mt-1">Závody v lovu kaprů a amurů</p>
+            <div className="h-[3px] w-9 bg-[var(--ds-forest-pale)] rounded-full mt-3" />
           </div>
           {isAdmin && !editing && (
             <button
               onClick={startEditing}
-              className="flex items-center gap-1.5 text-sm font-semibold text-[var(--ds-forest-lt)] hover:text-[var(--ds-forest)] bg-white border border-[var(--ds-border)] hover:border-[var(--ds-forest-lt)] px-3 py-2 rounded-xl transition-colors shadow-sm shrink-0 mt-1"
+              className="flex items-center gap-1.5 text-sm font-semibold text-[var(--ds-forest)] bg-white border border-[var(--ds-border)] hover:border-[var(--ds-forest-lt)] px-3 py-2 rounded-xl transition-colors shadow-sm shrink-0 mt-1"
             >
               <Pencil className="w-4 h-4" />
               Upravit

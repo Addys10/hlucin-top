@@ -244,14 +244,14 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <p className="text-gray-400 text-sm">Načítám...</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[var(--ds-bg)]">
+    <div className="min-h-screen">
 
       {/* Navbar */}
       <header className="bg-[var(--ds-forest)] border-b border-[oklch(100%_0_0/0.08)] shadow-[0_2px_12px_oklch(16%_0.02_80/0.18)] sticky top-0 z-10">
@@ -276,10 +276,10 @@ export default function Dashboard() {
 
         {/* Team title */}
         <div className="mb-1">
-          <p className="text-[11px] font-bold uppercase tracking-[0.09em] text-[var(--ds-ink-4)]">Přihlášen jako</p>
-          <h1 className="text-[28px] font-extrabold tracking-tight text-[var(--ds-ink)] leading-tight">{team?.name}</h1>
+          <p className="text-[11px] font-bold uppercase tracking-[0.09em] text-white/50">Přihlášen jako</p>
+          <h1 className="text-[28px] font-extrabold tracking-tight text-white leading-tight">{team?.name}</h1>
           {(team?.member1 || team?.member2) && (
-            <p className="text-[13px] text-[var(--ds-ink-3)] mt-0.5">
+            <p className="text-[13px] text-white/60 mt-0.5">
               {[team.member1, team.member2].filter(Boolean).join(' · ')}
             </p>
           )}

@@ -476,14 +476,14 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--ds-bg)] flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <p className="text-[var(--ds-ink-4)] text-sm">Načítám...</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[var(--ds-bg)]">
+    <div className="min-h-screen">
 
       {/* Navbar */}
       <header className="bg-[var(--ds-forest)] border-b border-[oklch(100%_0_0/0.08)] shadow-[0_2px_12px_oklch(16%_0.02_80/0.18)] sticky top-0 z-10">

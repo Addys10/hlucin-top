@@ -308,7 +308,7 @@ export default function Leaderboard() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-[var(--ds-bg)]">
+    <div className="min-h-screen">
 
       {/* Navbar */}
       <header className="bg-[var(--ds-forest)] border-b border-[oklch(100%_0_0/0.08)] shadow-[0_2px_12px_oklch(16%_0.02_80/0.18)] sticky top-0 z-10">
@@ -373,11 +373,11 @@ export default function Leaderboard() {
 
       <main className="max-w-3xl mx-auto px-4 py-6 flex flex-col gap-4">
         <div className="mb-7">
-          <p className="text-[11px] font-bold uppercase tracking-[0.10em] text-[var(--ds-forest-lt)] mb-1">Živé pořadí</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.10em] text-[var(--ds-forest-pale)] mb-1">Živé pořadí</p>
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-[28px] font-extrabold text-[var(--ds-ink)] leading-tight tracking-tight">Výsledky závodu</h2>
-              <p className="text-sm text-[var(--ds-ink-3)] mt-1">Součet 3 nejtěžších úlovků na tým</p>
+              <h2 className="text-[28px] font-extrabold text-white leading-tight tracking-tight">Výsledky závodu</h2>
+              <p className="text-sm text-white/60 mt-1">Součet 3 nejtěžších úlovků na tým</p>
             </div>
             <div className="flex items-center gap-2 bg-white border border-[var(--ds-border)] rounded-full px-4 py-2 shadow-sm font-mono text-[15px] font-medium text-[var(--ds-ink-2)] shrink-0 whitespace-nowrap">
               <span className="w-2 h-2 rounded-full bg-[oklch(60%_0.20_148)] shrink-0 shadow-[0_0_0_0_oklch(60%_0.20_148)] animate-pulse" />
@@ -455,9 +455,9 @@ export default function Leaderboard() {
 
         {/* Legend */}
         <div className="flex flex-wrap gap-x-5 gap-y-1 px-1">
-          <p className="text-xs text-[var(--ds-ink-4)]"><span className="font-semibold text-[var(--ds-ink-3)]">Váha (top 3)</span> — součet hmotností 3 nejtěžších úlovků</p>
-          <p className="text-xs text-[var(--ds-ink-4)]"><span className="font-semibold text-[var(--ds-ink-3)]">NR</span> — nejtěžší ryba</p>
-          <p className="text-xs text-[var(--ds-ink-4)]"><span className="font-semibold text-[var(--ds-ink-3)]">PÚ</span> — počet úlovků</p>
+          <p className="text-xs text-white/50"><span className="font-semibold text-white/70">Váha (top 3)</span> — součet hmotností 3 nejtěžších úlovků</p>
+          <p className="text-xs text-white/50"><span className="font-semibold text-white/70">NR</span> — nejtěžší ryba</p>
+          <p className="text-xs text-white/50"><span className="font-semibold text-white/70">PÚ</span> — počet úlovků</p>
         </div>
 
       </main>
