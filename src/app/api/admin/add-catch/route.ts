@@ -8,8 +8,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { team_id, fish_type, weight_g, length_mm, photo_url_1, photo_url_2 } = await req.json()
-  if (!team_id || !fish_type || !weight_g || !photo_url_1 || !photo_url_2) {
+  const { team_id, fish_type, weight_g, length_mm, photo_url_1, photo_url_2, photo_url_3 } = await req.json()
+  if (!team_id || !fish_type || !weight_g || !photo_url_1 || !photo_url_2 || !photo_url_3) {
     return NextResponse.json({ error: 'Chybí povinná pole.' }, { status: 400 })
   }
 
@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
     length_mm: length_mm ?? null,
     photo_url_1,
     photo_url_2,
+    photo_url_3,
   }).select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })

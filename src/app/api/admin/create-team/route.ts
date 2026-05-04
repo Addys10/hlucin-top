@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { name, username, password } = await req.json()
+  const { name, username, password, member1, member2 } = await req.json()
   if (!name || !username || !password) {
     return NextResponse.json({ error: 'Chybí povinná pole.' }, { status: 400 })
   }
@@ -30,6 +30,8 @@ export async function POST(req: NextRequest) {
     name: name.trim(),
     auth_user_id: authData.user.id,
     is_admin: false,
+    member1: member1?.trim() || null,
+    member2: member2?.trim() || null,
   })
 
   if (teamError) {

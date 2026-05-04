@@ -4,11 +4,11 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Camera, LogOut, Trash2, X } from 'lucide-react'
+import { Camera, Check, LogOut, Pencil, Trash2, X } from 'lucide-react'
 import imageCompression from 'browser-image-compression'
 import { supabase } from '@/lib/supabase'
 
-type Team = { id: string; name: string; auth_user_id: string }
+type Team = { id: string; name: string; auth_user_id: string; member1?: string | null; member2?: string | null }
 type Tab = 'teams' | 'catch'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -88,8 +88,14 @@ function TeamsTab({ teams, onRefresh }: { teams: Team[]; onRefresh: () => void }
   const [name, setName] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [member1, setMember1] = useState('')
+  const [member2, setMember2] = useState('')
   const [creating, setCreating] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editMember1, setEditMember1] = useState('')
+  const [editMember2, setEditMember2] = useState('')
+  const [savingId, setSavingId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
@@ -97,14 +103,33 @@ function TeamsTab({ teams, onRefresh }: { teams: Team[]; onRefresh: () => void }
     e.preventDefault()
     setError(''); setSuccess(''); setCreating(true)
     try {
-      await adminPost('/api/admin/create-team', { name, username, password })
-      setName(''); setUsername(''); setPassword('')
+      await adminPost('/api/admin/create-team', { name, username, password, member1, member2 })
+      setName(''); setUsername(''); setPassword(''); setMember1(''); setMember2('')
       setSuccess(`Tým "${name}" vytvořen.`)
       onRefresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Chyba.')
     } finally {
       setCreating(false)
+    }
+  }
+
+  function startEdit(team: Team) {
+    setEditingId(team.id)
+    setEditMember1(team.member1 ?? '')
+    setEditMember2(team.member2 ?? '')
+  }
+
+  async function saveEdit(team: Team) {
+    setSavingId(team.id)
+    try {
+      await adminPost('/api/admin/update-team', { teamId: team.id, member1: editMember1, member2: editMember2 })
+      setEditingId(null)
+      onRefresh()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Chyba při ukládání.')
+    } finally {
+      setSavingId(null)
     }
   }
 
@@ -133,20 +158,86 @@ function TeamsTab({ teams, onRefresh }: { teams: Team[]; onRefresh: () => void }
           <p className="text-center py-10 text-[var(--ds-ink-4)] text-sm">Žádné týmy</p>
         ) : (
           teams.map(team => {
+            const isEditing = editingId === team.id
+            const isSaving = savingId === team.id
             return (
-              <div key={team.id} className="flex items-center gap-3 px-4 py-3.5 border-b last:border-0 border-[var(--ds-border)] hover:bg-[var(--ds-sand-50)]">
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-[var(--ds-ink)] text-[15px]">{team.name}</p>
-                  <p className="text-xs text-[var(--ds-ink-4)] font-mono truncate">{team.auth_user_id}</p>
+              <div key={team.id} className="border-b last:border-0 border-[var(--ds-border)]">
+                {/* Display row */}
+                <div className="flex items-center gap-3 px-4 py-3.5 hover:bg-[var(--ds-sand-50)]">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-[var(--ds-ink)] text-[15px]">{team.name}</p>
+                    {(team.member1 || team.member2) ? (
+                      <p className="text-[12px] text-[var(--ds-ink-3)] truncate">
+                        {[team.member1, team.member2].filter(Boolean).join(' · ')}
+                      </p>
+                    ) : (
+                      <p className="text-[12px] text-[var(--ds-ink-5)] italic">Bez závodníků</p>
+                    )}
+                    <p className="text-xs text-[var(--ds-ink-5)] font-mono truncate">{team.auth_user_id}</p>
+                  </div>
+                  <button
+                    onClick={() => isEditing ? setEditingId(null) : startEdit(team)}
+                    className={`p-2 rounded-lg transition-colors ${isEditing ? 'text-[var(--ds-forest-lt)] bg-[var(--ds-forest-pale)]' : 'text-gray-300 hover:text-[var(--ds-forest-lt)] hover:bg-[var(--ds-forest-pale)]'}`}
+                    title="Upravit závodníky"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(team)}
+                    disabled={deletingId === team.id}
+                    className="p-2 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
+                    title="Smazat tým"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
-                <button
-                  onClick={() => handleDelete(team)}
-                  disabled={deletingId === team.id}
-                  className="p-2 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
-                  title="Smazat tým"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+
+                {/* Inline edit form */}
+                {isEditing && (
+                  <div className="px-4 pb-4 bg-[var(--ds-sand-50)] border-t border-[var(--ds-border)]">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.07em] text-[var(--ds-ink-4)] py-3">Závodníci — {team.name}</p>
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[11px] font-bold uppercase tracking-[0.07em] text-[var(--ds-ink-4)]">Závodník 1</label>
+                        <input
+                          value={editMember1}
+                          onChange={e => setEditMember1(e.target.value)}
+                          placeholder="Jméno Příjmení"
+                          disabled={isSaving}
+                          className="w-full rounded-xl border-[1.5px] border-[var(--ds-border)] bg-white px-3 h-[44px] text-[15px] text-[var(--ds-ink)] outline-none focus:border-[var(--ds-forest-lt)] focus:shadow-[0_0_0_3px_var(--ds-forest-wash)] transition disabled:opacity-50"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[11px] font-bold uppercase tracking-[0.07em] text-[var(--ds-ink-4)]">Závodník 2</label>
+                        <input
+                          value={editMember2}
+                          onChange={e => setEditMember2(e.target.value)}
+                          placeholder="Jméno Příjmení"
+                          disabled={isSaving}
+                          className="w-full rounded-xl border-[1.5px] border-[var(--ds-border)] bg-white px-3 h-[44px] text-[15px] text-[var(--ds-ink)] outline-none focus:border-[var(--ds-forest-lt)] focus:shadow-[0_0_0_3px_var(--ds-forest-wash)] transition disabled:opacity-50"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => saveEdit(team)}
+                        disabled={isSaving}
+                        className="flex items-center gap-1.5 bg-[var(--ds-forest)] hover:bg-[var(--ds-forest-mid)] disabled:opacity-60 text-white font-semibold rounded-xl px-4 h-[38px] text-sm transition-colors"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        {isSaving ? 'Ukládám...' : 'Uložit'}
+                      </button>
+                      <button
+                        onClick={() => setEditingId(null)}
+                        disabled={isSaving}
+                        className="flex items-center gap-1.5 bg-white border border-[var(--ds-border)] hover:bg-[var(--ds-sand-100)] text-[var(--ds-ink-3)] font-semibold rounded-xl px-4 h-[38px] text-sm transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        Zrušit
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )
           })
@@ -164,6 +255,24 @@ function TeamsTab({ teams, onRefresh }: { teams: Team[]; onRefresh: () => void }
               placeholder="Tým Hlučín"
               className="w-full rounded-xl border-[1.5px] border-[var(--ds-border)] px-4 h-[50px] text-[16px] text-[var(--ds-ink)] outline-none focus:border-[var(--ds-forest-lt)] focus:shadow-[0_0_0_3px_var(--ds-forest-wash)] transition disabled:opacity-50"
             />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[13px] font-semibold text-[var(--ds-ink-2)] mb-1.5">Závodník 1</label>
+              <input
+                value={member1} onChange={e => setMember1(e.target.value)} disabled={creating}
+                placeholder="Jméno Příjmení"
+                className="w-full rounded-xl border-[1.5px] border-[var(--ds-border)] px-4 h-[50px] text-[16px] text-[var(--ds-ink)] outline-none focus:border-[var(--ds-forest-lt)] focus:shadow-[0_0_0_3px_var(--ds-forest-wash)] transition disabled:opacity-50"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[13px] font-semibold text-[var(--ds-ink-2)] mb-1.5">Závodník 2</label>
+              <input
+                value={member2} onChange={e => setMember2(e.target.value)} disabled={creating}
+                placeholder="Jméno Příjmení"
+                className="w-full rounded-xl border-[1.5px] border-[var(--ds-border)] px-4 h-[50px] text-[16px] text-[var(--ds-ink)] outline-none focus:border-[var(--ds-forest-lt)] focus:shadow-[0_0_0_3px_var(--ds-forest-wash)] transition disabled:opacity-50"
+              />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
@@ -201,23 +310,26 @@ function AddCatchTab({ teams }: { teams: Team[] }) {
   const [teamId, setTeamId] = useState('')
   const [fishType, setFishType] = useState<'Kapr' | 'Amur'>('Kapr')
   const [weightKg, setWeightKg] = useState('')
-  const [lengthCm, setLengthCm] = useState('')
   const [photo1File, setPhoto1File] = useState<File | null>(null)
   const [photo2File, setPhoto2File] = useState<File | null>(null)
+  const [photo3File, setPhoto3File] = useState<File | null>(null)
   const [preview1, setPreview1] = useState<string | null>(null)
   const [preview2, setPreview2] = useState<string | null>(null)
+  const [preview3, setPreview3] = useState<string | null>(null)
   const [status, setStatus] = useState<'idle' | 'compressing' | 'uploading' | 'done'>('idle')
   const [error, setError] = useState('')
 
-  function setPhoto(slot: 1 | 2, file: File) {
+  function setPhoto(slot: 1 | 2 | 3, file: File) {
     const url = URL.createObjectURL(file)
     if (slot === 1) { setPhoto1File(file); setPreview1(url) }
-    else { setPhoto2File(file); setPreview2(url) }
+    else if (slot === 2) { setPhoto2File(file); setPreview2(url) }
+    else { setPhoto3File(file); setPreview3(url) }
   }
 
-  function clearPhoto(slot: 1 | 2) {
+  function clearPhoto(slot: 1 | 2 | 3) {
     if (slot === 1) { setPhoto1File(null); if (preview1) URL.revokeObjectURL(preview1); setPreview1(null) }
-    else { setPhoto2File(null); if (preview2) URL.revokeObjectURL(preview2); setPreview2(null) }
+    else if (slot === 2) { setPhoto2File(null); if (preview2) URL.revokeObjectURL(preview2); setPreview2(null) }
+    else { setPhoto3File(null); if (preview3) URL.revokeObjectURL(preview3); setPreview3(null) }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -225,26 +337,26 @@ function AddCatchTab({ teams }: { teams: Team[] }) {
     setError('')
 
     const weight_g = Math.round(parseFloat(weightKg) * 1000)
-    const length_mm = lengthCm ? Math.round(parseFloat(lengthCm) * 10) : null
 
     if (!teamId) { setError('Vyberte tým.'); return }
     if (!weightKg || isNaN(weight_g) || weight_g <= 0) { setError('Zadejte platnou váhu.'); return }
     if (weight_g > 100_000) { setError('Váha nesmí překročit 100 kg.'); return }
-    if (!photo1File || !photo2File) { setError('Obě fotky jsou povinné.'); return }
+    if (!photo1File || !photo2File || !photo3File) { setError('Všechny tři fotky jsou povinné.'); return }
 
     try {
       setStatus('compressing')
       const timestamp = Date.now()
-      const [photo_url_1, photo_url_2] = await Promise.all([
+      const [photo_url_1, photo_url_2, photo_url_3] = await Promise.all([
         compressAndUpload(photo1File, `${teamId}/${timestamp}_1`),
         compressAndUpload(photo2File, `${teamId}/${timestamp}_2`),
+        compressAndUpload(photo3File, `${teamId}/${timestamp}_3`),
       ])
 
       setStatus('uploading')
-      await adminPost('/api/admin/add-catch', { team_id: teamId, fish_type: fishType, weight_g, length_mm, photo_url_1, photo_url_2 })
+      await adminPost('/api/admin/add-catch', { team_id: teamId, fish_type: fishType, weight_g, photo_url_1, photo_url_2, photo_url_3 })
 
-      setTeamId(''); setFishType('Kapr'); setWeightKg(''); setLengthCm('')
-      clearPhoto(1); clearPhoto(2)
+      setTeamId(''); setFishType('Kapr'); setWeightKg('')
+      clearPhoto(1); clearPhoto(2); clearPhoto(3)
       setStatus('done')
       setTimeout(() => setStatus('idle'), 3000)
     } catch (err) {
@@ -289,27 +401,20 @@ function AddCatchTab({ teams }: { teams: Team[] }) {
           </div>
         </div>
 
-        {/* Weight + length */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-semibold text-[var(--ds-ink-2)] mb-1.5">Váha (kg)<span className="text-red-500 ml-0.5">*</span></label>
-            <input type="number" min="0" max="100" step="0.001" value={weightKg} onChange={e => setWeightKg(e.target.value)}
-              placeholder="např. 27" disabled={busy}
-              className="w-full rounded-xl border-[1.5px] border-[var(--ds-border)] px-4 h-[50px] text-[16px] text-[var(--ds-ink)] outline-none focus:border-[var(--ds-forest-lt)] focus:shadow-[0_0_0_3px_var(--ds-forest-wash)] transition disabled:opacity-50" />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-semibold text-[var(--ds-ink-2)]">Délka (cm)</label>
-            <input type="number" min="0" step="0.1" value={lengthCm} onChange={e => setLengthCm(e.target.value)}
-              placeholder="např. 30" disabled={busy}
-              className="w-full rounded-xl border-[1.5px] border-[var(--ds-border)] px-4 h-[50px] text-[16px] text-[var(--ds-ink)] outline-none focus:border-[var(--ds-forest-lt)] focus:shadow-[0_0_0_3px_var(--ds-forest-wash)] transition disabled:opacity-50" />
-          </div>
+        {/* Weight */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[13px] font-semibold text-[var(--ds-ink-2)] mb-1.5">Váha (kg)<span className="text-red-500 ml-0.5">*</span></label>
+          <input type="number" min="0" max="100" step="0.001" value={weightKg} onChange={e => setWeightKg(e.target.value)}
+            placeholder="např. 27" disabled={busy}
+            className="w-full rounded-xl border-[1.5px] border-[var(--ds-border)] px-4 h-[50px] text-[16px] text-[var(--ds-ink)] outline-none focus:border-[var(--ds-forest-lt)] focus:shadow-[0_0_0_3px_var(--ds-forest-wash)] transition disabled:opacity-50" />
         </div>
 
         {/* Photos */}
         <div className="grid grid-cols-2 gap-3">
-          <PhotoPicker label="Fotka 1" preview={preview1} onChange={f => setPhoto(1, f)} onClear={() => clearPhoto(1)} disabled={busy} />
-          <PhotoPicker label="Fotka 2" preview={preview2} onChange={f => setPhoto(2, f)} onClear={() => clearPhoto(2)} disabled={busy} />
+          <PhotoPicker label="Levá strana" preview={preview1} onChange={f => setPhoto(1, f)} onClear={() => clearPhoto(1)} disabled={busy} />
+          <PhotoPicker label="Pravá strana" preview={preview2} onChange={f => setPhoto(2, f)} onClear={() => clearPhoto(2)} disabled={busy} />
         </div>
+        <PhotoPicker label="Fotka váhy" preview={preview3} onChange={f => setPhoto(3, f)} onClear={() => clearPhoto(3)} disabled={busy} />
 
         {error && <p className="text-sm text-red-500">{error}</p>}
         {status === 'compressing' && (
@@ -346,7 +451,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true)
 
   async function loadTeams() {
-    const { data } = await supabase.from('teams').select('id, name, auth_user_id').eq('is_admin', false).order('name')
+    const { data } = await supabase.from('teams').select('id, name, auth_user_id, member1, member2').order('name')
     setTeams(data ?? [])
   }
 

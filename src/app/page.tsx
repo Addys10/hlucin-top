@@ -6,14 +6,17 @@ import Link from 'next/link'
 import { ChevronRight, ArrowLeft, Fish, LogOut } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { supabase } from '@/lib/supabase'
+import SponsorCarousel from '@/components/SponsorCarousel'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type Team = { id: string; name: string }
+type Team = { id: string; name: string; member1?: string | null; member2?: string | null }
 type Catch = { id: string; team_id: string; weight_g: number; fish_type: string }
 type TeamScore = {
   id: string
   name: string
+  member1?: string | null
+  member2?: string | null
   totalWeight: number
   catchCount: number
   heaviestWeight: number
@@ -27,6 +30,7 @@ type CatchDetail = {
   created_at: string
   photo_url_1?: string | null
   photo_url_2?: string | null
+  photo_url_3?: string | null
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -41,6 +45,8 @@ function calculateScores(teams: Team[], catches: Catch[]): TeamScore[] {
       return {
         id: team.id,
         name: team.name,
+        member1: team.member1,
+        member2: team.member2,
         totalWeight,
         catchCount: teamCatches.length,
         heaviestWeight: heaviest?.weight_g ?? 0,
@@ -114,7 +120,7 @@ function TeamDetail({ team }: { team: TeamScore }) {
     async function load() {
       const { data } = await supabase
         .from('catches')
-        .select('id, fish_type, weight_g, length_mm, created_at, photo_url_1, photo_url_2')
+        .select('id, fish_type, weight_g, length_mm, created_at, photo_url_1, photo_url_2, photo_url_3')
         .eq('team_id', team.id)
         .order('weight_g', { ascending: false })
       setCatches(data ?? [])
@@ -129,41 +135,41 @@ function TeamDetail({ team }: { team: TeamScore }) {
 
   return (
     <div className="flex flex-col">
-      {/* Stats + chart */}
-      <div className="bg-[var(--ds-sand-50)] border-b border-[var(--ds-border)]">
-        <div className="flex flex-col sm:flex-row">
-          {/* Stats */}
-          <div className="sm:w-52 shrink-0 px-5 py-5 flex flex-col gap-3 border-b sm:border-b-0 sm:border-r border-[var(--ds-border)]">
-            {loading ? (
-              Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-8 bg-gray-200 rounded-lg animate-pulse" />
-              ))
-            ) : (
-              <>
-                <Stat label="Váha (top 3)" value={catches.length > 0 ? `${(totalWeight / 1000).toFixed(1)} kg` : '—'} />
-                <Stat label="Celková váha" value={catches.length > 0 ? `${(catches.reduce((s, c) => s + c.weight_g, 0) / 1000).toFixed(2)} kg` : '—'} />
-                <Stat label="Počet úlovků" value={String(catches.length)} />
-              </>
-            )}
-          </div>
+      {/* Stats + chart — only when loading or data present */}
+      {(loading || catches.length > 0) && (
+        <div className="bg-[var(--ds-sand-50)] border-b border-[var(--ds-border)]">
+          <div className="flex flex-col sm:flex-row">
+            {/* Stats */}
+            <div className="sm:w-52 shrink-0 px-5 py-5 flex flex-col gap-3 border-b sm:border-b-0 sm:border-r border-[var(--ds-border)]">
+              {loading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="h-8 bg-gray-200 rounded-lg animate-pulse" />
+                ))
+              ) : (
+                <>
+                  <Stat label="Váha (top 3)" value={`${(totalWeight / 1000).toFixed(1)} kg`} />
+                  <Stat label="Celková váha" value={`${(catches.reduce((s, c) => s + c.weight_g, 0) / 1000).toFixed(2)} kg`} />
+                  <Stat label="Počet úlovků" value={String(catches.length)} />
+                </>
+              )}
+            </div>
 
-          {/* Chart */}
-          <div className="flex-1 px-5 py-5 flex flex-col" style={{ minHeight: 140 }}>
-            <p className="text-[11px] font-bold uppercase tracking-[0.07em] text-[var(--ds-ink-4)] mb-2">Váha dle dne</p>
-            {loading ? (
-              <div className="h-28 flex items-end gap-2">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="flex-1 bg-gray-200 rounded-t-lg animate-pulse" style={{ height: `${30 + i * 12}%` }} />
-                ))}
-              </div>
-            ) : catches.length === 0 ? (
-              <div className="h-28 flex items-center justify-center text-gray-400 text-sm">Žádné úlovky</div>
-            ) : (
-              <BarChart catches={catches} />
-            )}
+            {/* Chart */}
+            <div className="flex-1 px-5 py-5 flex flex-col" style={{ minHeight: 140 }}>
+              <p className="text-[11px] font-bold uppercase tracking-[0.07em] text-[var(--ds-ink-4)] mb-2">Váha dle dne</p>
+              {loading ? (
+                <div className="h-28 flex items-end gap-2">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="flex-1 bg-gray-200 rounded-t-lg animate-pulse" style={{ height: `${30 + i * 12}%` }} />
+                  ))}
+                </div>
+              ) : (
+                <BarChart catches={catches} />
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Catches list */}
       <div>
@@ -195,7 +201,7 @@ function TeamDetail({ team }: { team: TeamScore }) {
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-[var(--ds-ink)] text-[14px]">{c.fish_type}</p>
                   <p className="text-xs text-[var(--ds-ink-4)]">
-                    {c.length_mm} mm · {new Date(c.created_at).toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(c.created_at).toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
                 <div className="text-right">
@@ -203,7 +209,7 @@ function TeamDetail({ team }: { team: TeamScore }) {
                   {isTop3 && <span className="text-[10px] font-bold bg-[var(--ds-gold-pale)] text-[oklch(40%_0.13_82)] px-2 py-0.5 rounded-full mt-1 inline-block">TOP 3</span>}
                 </div>
                 <div className="flex gap-1 shrink-0">
-                  {[c.photo_url_1, c.photo_url_2].filter(Boolean).map((url, pi) => (
+                  {[c.photo_url_1, c.photo_url_2, c.photo_url_3].filter(Boolean).map((url, pi) => (
                     <button
                       key={pi}
                       onClick={() => setLightbox(url!)}
@@ -268,7 +274,7 @@ export default function Leaderboard() {
       const { data: { session } } = await supabase.auth.getSession()
 
       const [{ data: teams }, { data: catches }] = await Promise.all([
-        supabase.from('teams').select('id, name, auth_user_id'),
+        supabase.from('teams').select('id, name, auth_user_id, member1, member2'),
         supabase.from('catches').select('id, team_id, weight_g, fish_type'),
       ])
 
@@ -315,6 +321,10 @@ export default function Leaderboard() {
           </div>
 
           {/* Right: auth */}
+          <Link href="/informace" className="text-sm font-semibold text-[oklch(100%_0_0/0.70)] hover:text-white transition-colors px-3 py-2 rounded-lg hidden sm:block">
+            Informace
+          </Link>
+
           {session === undefined ? null : session ? (
             <div className="flex items-center gap-2">
               {session && teamName && (
@@ -358,6 +368,8 @@ export default function Leaderboard() {
           )}
         </div>
       </header>
+
+      <SponsorCarousel />
 
       <main className="max-w-3xl mx-auto px-4 py-6 flex flex-col gap-4">
         <div className="mb-7">
@@ -411,6 +423,11 @@ export default function Leaderboard() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-[var(--ds-ink)] truncate text-[17px]">{team.name}</p>
+                    {(team.member1 || team.member2) && (
+                      <p className="text-[12px] text-[var(--ds-ink-4)] truncate">
+                        {[team.member1, team.member2].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
                   </div>
                   <div className="text-right shrink-0">
                     <div className="font-mono font-extrabold text-[var(--ds-ink)] tabular-nums text-[20px] leading-tight">{team.totalWeight > 0 ? (team.totalWeight / 1000).toFixed(2) : '—'}</div>
@@ -456,9 +473,16 @@ export default function Leaderboard() {
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <DialogTitle className="font-extrabold text-[var(--ds-ink)] text-[15px] truncate">
-              {selectedTeam?.name}
-            </DialogTitle>
+            <div className="flex flex-col min-w-0">
+              <DialogTitle className="font-extrabold text-[var(--ds-ink)] text-[15px] truncate leading-tight">
+                {selectedTeam?.name}
+              </DialogTitle>
+              {(selectedTeam?.member1 || selectedTeam?.member2) && (
+                <p className="text-[12px] text-[var(--ds-ink-4)] truncate">
+                  {[selectedTeam.member1, selectedTeam.member2].filter(Boolean).join(' · ')}
+                </p>
+              )}
+            </div>
           </div>
 
           {selectedTeam && <TeamDetail team={selectedTeam} />}

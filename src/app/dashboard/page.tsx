@@ -8,8 +8,8 @@ import { Camera, Fish, LogOut, X } from 'lucide-react'
 import imageCompression from 'browser-image-compression'
 import { supabase } from '@/lib/supabase'
 
-type Team = { id: string; name: string }
-type Catch = { id: string; fish_type: string; weight_g: number; length_mm: number; created_at: string; photo_url_1?: string; photo_url_2?: string }
+type Team = { id: string; name: string; member1?: string | null; member2?: string | null }
+type Catch = { id: string; fish_type: string; weight_g: number; length_mm: number; created_at: string; photo_url_1?: string; photo_url_2?: string; photo_url_3?: string }
 
 type UploadStatus = 'idle' | 'compressing' | 'uploading' | 'done' | 'error'
 
@@ -122,11 +122,12 @@ export default function Dashboard() {
 
   const [fishType, setFishType] = useState<'Kapr' | 'Amur'>('Kapr')
   const [weightKg, setWeightKg] = useState('')
-  const [lengthCm, setLengthCm] = useState('')
   const [photo1File, setPhoto1File] = useState<File | null>(null)
   const [photo2File, setPhoto2File] = useState<File | null>(null)
+  const [photo3File, setPhoto3File] = useState<File | null>(null)
   const [preview1, setPreview1] = useState<string | null>(null)
   const [preview2, setPreview2] = useState<string | null>(null)
+  const [preview3, setPreview3] = useState<string | null>(null)
   const [lightbox, setLightbox] = useState<string | null>(null)
 
   useEffect(() => {
@@ -136,7 +137,7 @@ export default function Dashboard() {
 
       const { data: teamData } = await supabase
         .from('teams')
-        .select('id, name')
+        .select('id, name, member1, member2')
         .eq('auth_user_id', user.id)
         .single()
 
@@ -145,7 +146,7 @@ export default function Dashboard() {
 
       const { data: catchData } = await supabase
         .from('catches')
-        .select('id, fish_type, weight_g, length_mm, created_at, photo_url_1, photo_url_2')
+        .select('id, fish_type, weight_g, length_mm, created_at, photo_url_1, photo_url_2, photo_url_3')
         .eq('team_id', teamData.id)
         .order('created_at', { ascending: false })
 
@@ -155,15 +156,17 @@ export default function Dashboard() {
     load()
   }, [router])
 
-  function setPhoto(slot: 1 | 2, file: File) {
+  function setPhoto(slot: 1 | 2 | 3, file: File) {
     const url = URL.createObjectURL(file)
     if (slot === 1) { setPhoto1File(file); setPreview1(url) }
-    else { setPhoto2File(file); setPreview2(url) }
+    else if (slot === 2) { setPhoto2File(file); setPreview2(url) }
+    else { setPhoto3File(file); setPreview3(url) }
   }
 
-  function clearPhoto(slot: 1 | 2) {
+  function clearPhoto(slot: 1 | 2 | 3) {
     if (slot === 1) { setPhoto1File(null); if (preview1) URL.revokeObjectURL(preview1); setPreview1(null) }
-    else { setPhoto2File(null); if (preview2) URL.revokeObjectURL(preview2); setPreview2(null) }
+    else if (slot === 2) { setPhoto2File(null); if (preview2) URL.revokeObjectURL(preview2); setPreview2(null) }
+    else { setPhoto3File(null); if (preview3) URL.revokeObjectURL(preview3); setPreview3(null) }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -174,8 +177,6 @@ export default function Dashboard() {
     setSubmitting(true)
 
     const weight_g = Math.round(parseFloat(weightKg) * 1000)
-    const length_mm = lengthCm ? Math.round(parseFloat(lengthCm) * 10) : null
-
     if (!weightKg || isNaN(weight_g) || weight_g <= 0) {
       setError('Zadejte platnou váhu.')
       setSubmitting(false)
@@ -186,13 +187,8 @@ export default function Dashboard() {
       setSubmitting(false)
       return
     }
-    if (length_mm !== null && length_mm <= 0) {
-      setError('Délka musí být větší než 0.')
-      setSubmitting(false)
-      return
-    }
-    if (!photo1File || !photo2File) {
-      setError('Obě fotky jsou povinné.')
+    if (!photo1File || !photo2File || !photo3File) {
+      setError('Všechny tři fotky jsou povinné.')
       setSubmitting(false)
       return
     }
@@ -200,25 +196,27 @@ export default function Dashboard() {
     try {
       setUploadStatus('compressing')
       const timestamp = Date.now()
-      const [compressed1, compressed2] = await Promise.all([
+      const [compressed1, compressed2, compressed3] = await Promise.all([
         compressImage(photo1File),
         compressImage(photo2File),
+        compressImage(photo3File),
       ])
 
       setUploadStatus('uploading')
       const ext = (f: File) => f.type === 'image/png' ? 'png' : 'jpg'
-      const [photo_url_1, photo_url_2] = await Promise.all([
+      const [photo_url_1, photo_url_2, photo_url_3] = await Promise.all([
         uploadWithRetry(compressed1, `${team.id}/${timestamp}_1.${ext(compressed1)}`),
         uploadWithRetry(compressed2, `${team.id}/${timestamp}_2.${ext(compressed2)}`),
+        uploadWithRetry(compressed3, `${team.id}/${timestamp}_3.${ext(compressed3)}`),
       ])
 
       const { data, error: insertError } = await supabase.from('catches').insert({
         team_id: team.id,
         fish_type: fishType,
         weight_g,
-        length_mm,
         photo_url_1,
         photo_url_2,
+        photo_url_3,
       }).select().single()
 
       if (insertError) throw new Error('Nepodařilo se uložit úlovek.')
@@ -226,9 +224,9 @@ export default function Dashboard() {
       setCatches(prev => [data, ...prev])
       setFishType('Kapr')
       setWeightKg('')
-      setLengthCm('')
       clearPhoto(1)
       clearPhoto(2)
+      clearPhoto(3)
       setUploadStatus('done')
       setTimeout(() => setUploadStatus('idle'), 3000)
     } catch (err) {
@@ -280,6 +278,11 @@ export default function Dashboard() {
         <div className="mb-1">
           <p className="text-[11px] font-bold uppercase tracking-[0.09em] text-[var(--ds-ink-4)]">Přihlášen jako</p>
           <h1 className="text-[28px] font-extrabold tracking-tight text-[var(--ds-ink)] leading-tight">{team?.name}</h1>
+          {(team?.member1 || team?.member2) && (
+            <p className="text-[13px] text-[var(--ds-ink-3)] mt-0.5">
+              {[team.member1, team.member2].filter(Boolean).join(' · ')}
+            </p>
+          )}
           <div className="h-[3px] w-9 bg-[var(--ds-forest-lt)] rounded-full mt-2.5" />
         </div>
 
@@ -313,56 +316,48 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Weight + length */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[13px] font-semibold text-[var(--ds-ink-2)]">
-                  Váha (kg)<span className="text-red-500 ml-0.5">*</span>
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.001"
-                  value={weightKg}
-                  onChange={e => setWeightKg(e.target.value)}
-                  placeholder="např. 27"
-                  disabled={submitting}
-                  className="w-full rounded-xl border-[1.5px] border-[var(--ds-border)] px-4 h-[50px] text-[16px] text-[var(--ds-ink)] outline-none focus:border-[var(--ds-forest-lt)] focus:shadow-[0_0_0_3px_var(--ds-forest-wash)] transition disabled:opacity-50"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[13px] font-semibold text-[var(--ds-ink-2)]">Délka (cm)</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  value={lengthCm}
-                  onChange={e => setLengthCm(e.target.value)}
-                  placeholder="např. 30"
-                  disabled={submitting}
-                  className="w-full rounded-xl border-[1.5px] border-[var(--ds-border)] px-4 h-[50px] text-[16px] text-[var(--ds-ink)] outline-none focus:border-[var(--ds-forest-lt)] focus:shadow-[0_0_0_3px_var(--ds-forest-wash)] transition disabled:opacity-50"
-                />
-              </div>
+            {/* Weight */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[13px] font-semibold text-[var(--ds-ink-2)]">
+                Váha (kg)<span className="text-red-500 ml-0.5">*</span>
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.001"
+                value={weightKg}
+                onChange={e => setWeightKg(e.target.value)}
+                placeholder="např. 27"
+                disabled={submitting}
+                className="w-full rounded-xl border-[1.5px] border-[var(--ds-border)] px-4 h-[50px] text-[16px] text-[var(--ds-ink)] outline-none focus:border-[var(--ds-forest-lt)] focus:shadow-[0_0_0_3px_var(--ds-forest-wash)] transition disabled:opacity-50"
+              />
             </div>
 
             {/* Photos */}
             <div className="grid grid-cols-2 gap-3">
               <PhotoPicker
-                label="Fotka 1"
+                label="Levá strana"
                 preview={preview1}
                 onChange={f => setPhoto(1, f)}
                 onClear={() => clearPhoto(1)}
                 disabled={submitting}
               />
               <PhotoPicker
-                label="Fotka 2"
+                label="Pravá strana"
                 preview={preview2}
                 onChange={f => setPhoto(2, f)}
                 onClear={() => clearPhoto(2)}
                 disabled={submitting}
               />
             </div>
+            <PhotoPicker
+              label="Fotka váhy"
+              preview={preview3}
+              onChange={f => setPhoto(3, f)}
+              onClear={() => clearPhoto(3)}
+              disabled={submitting}
+            />
 
             {error && <p className="text-sm text-red-500">{error}</p>}
             <StatusBadge status={uploadStatus} />
@@ -392,14 +387,14 @@ export default function Dashboard() {
                 <div className="flex-1 min-w-0">
                   <p className="text-[15px] font-bold text-[var(--ds-ink)]">{c.fish_type}</p>
                   <p className="text-[12px] text-[var(--ds-ink-4)]">
-                    {c.length_mm ? `${c.length_mm} mm · ` : ''}{new Date(c.created_at).toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    {new Date(c.created_at).toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </p>
                   <span className="text-[17px] font-extrabold font-mono text-[var(--ds-ink)] tabular-nums">
                     {(c.weight_g / 1000).toFixed(2)} kg
                   </span>
                 </div>
                 <div className="flex gap-1.5 shrink-0">
-                  {[c.photo_url_1, c.photo_url_2].map((url, pi) => url ? (
+                  {[c.photo_url_1, c.photo_url_2, c.photo_url_3].map((url, pi) => url ? (
                     <button
                       key={pi}
                       type="button"
