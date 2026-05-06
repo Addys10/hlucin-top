@@ -30,8 +30,8 @@ export default function SponsorCarousel() {
               alt={s.alt}
               width={160}
               height={40}
-              className="h-16 w-auto object-contain"
-              style={{ maxWidth: 160 }}
+              className="object-contain"
+              style={{ height: '64px', width: 'auto', maxWidth: 160 }}
             />
           </div>
         ))}

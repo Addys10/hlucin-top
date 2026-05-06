@@ -359,7 +359,10 @@ export default function Leaderboard() {
                     {i + 1}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-[var(--ds-ink)] truncate text-[17px] flex items-center gap-1">{team.name}<PenaltyCards yellow_cards={team.yellow_cards} /></p>
+                    <div className="flex items-center gap-1 min-w-0">
+                      <span className="font-bold text-[var(--ds-ink)] truncate text-[17px]">{team.name}</span>
+                      <span className="shrink-0"><PenaltyCards yellow_cards={team.yellow_cards} /></span>
+                    </div>
                     {(team.member1 || team.member2) && (
                       <p className="text-[12px] text-[var(--ds-ink-4)] truncate">
                         <span className="sm:hidden">{[team.member1, team.member2].filter(Boolean).map(abbrevName).join(' · ')}</span>

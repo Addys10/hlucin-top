@@ -65,7 +65,7 @@ export default function Navbar() {
 
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity shrink-0">
-          <Image src="/image.png" alt="Hlučín Top 3" width={36} height={36} className="rounded-xl shrink-0" />
+          <Image src="/image.png" alt="Hlučín Top 3" width={36} height={36} style={{ width: 36, height: 36 }} className="rounded-xl shrink-0" />
           <p className="font-bold text-white text-sm whitespace-nowrap">HLUČÍN TOP 3</p>
         </Link>
 
