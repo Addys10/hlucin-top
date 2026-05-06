@@ -3,14 +3,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import Link from 'next/link'
-import { Camera, Check, LogOut, Pencil, Trash2, X } from 'lucide-react'
+import { Camera, Check, Pencil, Trash2, X } from 'lucide-react'
+import Navbar from '@/components/Navbar'
 import imageCompression from 'browser-image-compression'
 import { supabase } from '@/lib/supabase'
 
-type Team = { id: string; name: string; auth_user_id: string; member1?: string | null; member2?: string | null }
+type Team = { id: string; name: string; auth_user_id: string; member1?: string | null; member2?: string | null; yellow_cards: number }
 type Tab = 'teams' | 'catch' | 'catches'
-type Catch = { id: string; team_id: string; fish_type: string; weight_g: number; photo_url_1: string; photo_url_2: string; photo_url_3: string; created_at: string }
+type Catch = { id: string; team_id: string; fish_type: string; weight_g: number; photo_url_1: string; photo_url_2: string; photo_url_3: string; created_at: string; status: 'pending' | 'approved' | 'rejected' }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -128,6 +128,7 @@ function TeamsTab({ teams, onRefresh }: { teams: Team[]; onRefresh: () => void }
   const [editMember1, setEditMember1] = useState('')
   const [editMember2, setEditMember2] = useState('')
   const [savingId, setSavingId] = useState<string | null>(null)
+  const [cardingId, setCardingId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
@@ -165,6 +166,18 @@ function TeamsTab({ teams, onRefresh }: { teams: Team[]; onRefresh: () => void }
     }
   }
 
+  async function handleCard(team: Team, action: 'add' | 'remove') {
+    setCardingId(team.id)
+    try {
+      await adminPost('/api/admin/set-yellow-cards', { teamId: team.id, action })
+      onRefresh()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Chyba.')
+    } finally {
+      setCardingId(null)
+    }
+  }
+
   async function handleDelete(team: Team) {
     if (!confirm(`Smazat tým "${team.name}" včetně všech úlovků?`)) return
     setDeletingId(team.id)
@@ -197,7 +210,11 @@ function TeamsTab({ teams, onRefresh }: { teams: Team[]; onRefresh: () => void }
                 {/* Display row */}
                 <div className="flex items-center gap-3 px-4 py-3.5 hover:bg-[var(--ds-sand-50)]">
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-[var(--ds-ink)] text-[15px]">{team.name}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-semibold text-[var(--ds-ink)] text-[15px]">{team.name}</p>
+                      {team.yellow_cards === 1 && <span className="inline-block w-[9px] h-[13px] rounded-[2px] bg-yellow-400 rotate-[-6deg] shadow-sm" title="Žlutá karta" />}
+                      {team.yellow_cards >= 2 && <span className="inline-block w-[9px] h-[13px] rounded-[2px] bg-red-500 rotate-[-6deg] shadow-sm" title="Červená karta – diskvalifikován" />}
+                    </div>
                     {(team.member1 || team.member2) ? (
                       <p className="text-[12px] text-[var(--ds-ink-3)] truncate">
                         {[team.member1, team.member2].filter(Boolean).join(' · ')}
@@ -207,6 +224,26 @@ function TeamsTab({ teams, onRefresh }: { teams: Team[]; onRefresh: () => void }
                     )}
                     <p className="text-xs text-[var(--ds-ink-5)] font-mono truncate">{team.auth_user_id}</p>
                   </div>
+                  {team.yellow_cards > 0 && (
+                    <button
+                      onClick={() => handleCard(team, 'remove')}
+                      disabled={cardingId === team.id}
+                      className="p-2 rounded-lg text-gray-300 hover:text-yellow-500 hover:bg-yellow-50 transition-colors disabled:opacity-40 text-xs font-bold"
+                      title="Odebrat žlutou kartu"
+                    >
+                      −🟨
+                    </button>
+                  )}
+                  {team.yellow_cards < 2 && (
+                    <button
+                      onClick={() => handleCard(team, 'add')}
+                      disabled={cardingId === team.id}
+                      className="p-2 rounded-lg text-gray-300 hover:text-yellow-500 hover:bg-yellow-50 transition-colors disabled:opacity-40 text-xs font-bold"
+                      title="Přidat žlutou kartu"
+                    >
+                      +🟨
+                    </button>
+                  )}
                   <button
                     onClick={() => isEditing ? setEditingId(null) : startEdit(team)}
                     className={`p-2 rounded-lg transition-colors ${isEditing ? 'text-[var(--ds-forest-lt)] bg-[var(--ds-forest-pale)]' : 'text-gray-300 hover:text-[var(--ds-forest-lt)] hover:bg-[var(--ds-forest-pale)]'}`}
@@ -480,6 +517,8 @@ function CatchesTab({ teams }: { teams: Team[] }) {
   const [selectedTeamId, setSelectedTeamId] = useState('')
   const [catches, setCatches] = useState<Catch[]>([])
   const [loadingCatches, setLoadingCatches] = useState(false)
+  const [pendingCatches, setPendingCatches] = useState<(Catch & { team_name: string })[]>([])
+  const [loadingPending, setLoadingPending] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editFishType, setEditFishType] = useState<'Kapr' | 'Amur'>('Kapr')
   const [editWeightKg, setEditWeightKg] = useState('')
@@ -491,6 +530,23 @@ function CatchesTab({ teams }: { teams: Team[] }) {
   const [editPreview3, setEditPreview3] = useState<string | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [statusingId, setStatusingId] = useState<string | null>(null)
+
+  async function loadPending() {
+    setLoadingPending(true)
+    const { data } = await supabase
+      .from('catches')
+      .select('*, teams(name)')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+    setPendingCatches((data ?? []).map((c: Catch & { teams: { name: string } | null }) => ({
+      ...c,
+      team_name: c.teams?.name ?? '—',
+    })))
+    setLoadingPending(false)
+  }
+
+  useEffect(() => { loadPending() }, [])
 
   async function loadCatches(teamId: string) {
     setLoadingCatches(true)
@@ -499,7 +555,8 @@ function CatchesTab({ teams }: { teams: Team[] }) {
       .select('*')
       .eq('team_id', teamId)
       .order('created_at', { ascending: false })
-    setCatches(data ?? [])
+    const order: Record<string, number> = { pending: 0, approved: 1, rejected: 2 }
+    setCatches((data ?? []).sort((a, b) => order[a.status] - order[b.status]))
     setLoadingCatches(false)
   }
 
@@ -573,6 +630,23 @@ function CatchesTab({ teams }: { teams: Team[] }) {
     }
   }
 
+  async function handleSetStatus(c: Catch, status: 'approved' | 'rejected') {
+    setStatusingId(c.id)
+    try {
+      await adminPost('/api/admin/set-catch-status', { catchId: c.id, status })
+      const order: Record<string, number> = { pending: 0, approved: 1, rejected: 2 }
+      setCatches(prev => {
+        const updated = prev.map(x => x.id === c.id ? { ...x, status } : x)
+        return updated.sort((a, b) => order[a.status] - order[b.status])
+      })
+      setPendingCatches(prev => prev.filter(x => x.id !== c.id))
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Chyba.')
+    } finally {
+      setStatusingId(null)
+    }
+  }
+
   const isSaving = (id: string) => savingId === id
 
   return (
@@ -614,10 +688,35 @@ function CatchesTab({ teams }: { teams: Team[] }) {
                     <Image src={c.photo_url_1} alt="" width={56} height={56} className="object-cover w-full h-full" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-[var(--ds-ink)] text-[15px]">{c.fish_type}</p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="font-semibold text-[var(--ds-ink)] text-[15px]">{c.fish_type}</p>
+                      {c.status === 'pending' && <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700">Čeká</span>}
+                      {c.status === 'approved' && <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-green-100 text-green-700">Schváleno</span>}
+                      {c.status === 'rejected' && <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-red-100 text-red-600">Zamítnuto</span>}
+                    </div>
                     <p className="text-[13px] text-[var(--ds-ink-3)]">{(c.weight_g / 1000).toFixed(3)} kg</p>
                     <p className="text-xs text-[var(--ds-ink-5)]">{new Date(c.created_at).toLocaleDateString('cs-CZ')}</p>
                   </div>
+                  {c.status !== 'approved' && (
+                    <button
+                      onClick={() => handleSetStatus(c, 'approved')}
+                      disabled={statusingId === c.id}
+                      className="p-2 rounded-lg text-gray-300 hover:text-green-600 hover:bg-green-50 transition-colors disabled:opacity-40"
+                      title="Schválit"
+                    >
+                      <Check className="w-4 h-4" />
+                    </button>
+                  )}
+                  {c.status !== 'rejected' && (
+                    <button
+                      onClick={() => handleSetStatus(c, 'rejected')}
+                      disabled={statusingId === c.id}
+                      className="p-2 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
+                      title="Zamítnout"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                   <button
                     onClick={() => isEditing ? cancelEdit() : startEdit(c)}
                     className={`p-2 rounded-lg transition-colors ${isEditing ? 'text-[var(--ds-forest-lt)] bg-[var(--ds-forest-pale)]' : 'text-gray-300 hover:text-[var(--ds-forest-lt)] hover:bg-[var(--ds-forest-pale)]'}`}
@@ -710,6 +809,46 @@ function CatchesTab({ teams }: { teams: Team[] }) {
           })}
         </div>
       )}
+
+      {/* Pending catches — all teams */}
+      <div className="bg-white border border-[var(--ds-border)] rounded-[18px] shadow-sm overflow-hidden">
+        <div className="px-4 py-3.5 border-b border-[var(--ds-border)] bg-amber-50 flex items-center justify-between">
+          <p className="text-[13px] font-bold text-amber-700">Ke schválení</p>
+          {!loadingPending && <span className="text-[12px] font-semibold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">{pendingCatches.length}</span>}
+        </div>
+        {loadingPending ? (
+          <p className="text-center py-8 text-[var(--ds-ink-4)] text-sm">Načítám...</p>
+        ) : pendingCatches.length === 0 ? (
+          <p className="text-center py-8 text-[var(--ds-ink-4)] text-sm">Žádné úlovky čekající na schválení</p>
+        ) : pendingCatches.map(c => (
+          <div key={c.id} className="flex items-center gap-3 px-4 py-3.5 border-b last:border-0 border-[var(--ds-border)] hover:bg-[var(--ds-sand-50)]">
+            <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-[var(--ds-sand-100)]">
+              <Image src={c.photo_url_1} alt="" width={48} height={48} className="object-cover w-full h-full" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-[var(--ds-ink)] text-[14px]">{c.fish_type} · {(c.weight_g / 1000).toFixed(3)} kg</p>
+              <p className="text-[12px] text-[var(--ds-ink-3)]">{c.team_name}</p>
+              <p className="text-[11px] text-[var(--ds-ink-5)]">{new Date(c.created_at).toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+            </div>
+            <button
+              onClick={() => handleSetStatus(c, 'approved')}
+              disabled={statusingId === c.id}
+              className="p-2 rounded-lg text-gray-300 hover:text-green-600 hover:bg-green-50 transition-colors disabled:opacity-40"
+              title="Schválit"
+            >
+              <Check className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => handleSetStatus(c, 'rejected')}
+              disabled={statusingId === c.id}
+              className="p-2 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
+              title="Zamítnout"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -718,12 +857,12 @@ function CatchesTab({ teams }: { teams: Team[] }) {
 
 export default function AdminPage() {
   const router = useRouter()
-  const [tab, setTab] = useState<Tab>('teams')
+  const [tab, setTab] = useState<Tab>('catches')
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
 
   async function loadTeams() {
-    const { data } = await supabase.from('teams').select('id, name, auth_user_id, member1, member2').order('name')
+    const { data } = await supabase.from('teams').select('id, name, auth_user_id, member1, member2, yellow_cards').order('name')
     setTeams(data ?? [])
   }
 
@@ -757,33 +896,13 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen">
 
-      {/* Navbar */}
-      <header className="bg-[var(--ds-forest)] border-b border-[oklch(100%_0_0/0.08)] shadow-[0_2px_12px_oklch(16%_0.02_80/0.18)] sticky top-0 z-10">
-        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
-          <Link href="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-            <Image src="/image.png" alt="Hlučín Top 3" width={32} height={32} className="rounded-lg shrink-0" />
-            <span className="font-bold text-white text-base">Admin</span>
-          </Link>
-          <div className="flex items-center gap-3">
-            <Link href="/" className="text-sm font-semibold text-[oklch(100%_0_0/0.70)] hover:text-white transition-colors">
-              Výsledky
-            </Link>
-            <button
-              onClick={async () => { await supabase.auth.signOut(); router.push('/') }}
-              className="flex items-center gap-1.5 text-xs text-[oklch(100%_0_0/0.55)] hover:text-white transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              Odhlásit
-            </button>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       <main className="max-w-2xl mx-auto px-4 py-6 flex flex-col gap-4">
 
         {/* Tabs */}
         <div className="flex gap-1 bg-white border border-[var(--ds-border)] rounded-xl p-1 shadow-sm mb-6">
-          {([['teams', 'Týmy'], ['catch', 'Přidat úlovek'], ['catches', 'Úlovky']] as [Tab, string][]).map(([key, label]) => (
+          {([['catches', 'Úlovky'], ['catch', 'Přidat úlovek'], ['teams', 'Týmy']] as [Tab, string][]).map(([key, label]) => (
             <button key={key} onClick={() => setTab(key)}
               className={`flex-1 h-10 rounded-lg font-semibold text-sm transition-all ${tab === key ? 'bg-[var(--ds-forest)] text-white shadow-sm' : 'bg-transparent text-[var(--ds-ink-3)] hover:bg-[var(--ds-sand-100)] hover:text-[var(--ds-ink)]'}`}>
               {label}

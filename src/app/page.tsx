@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
-import Link from 'next/link'
-import { ChevronRight, ArrowLeft, Fish, LogOut, Menu, X } from 'lucide-react'
+import { ChevronRight, ArrowLeft, Fish } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { supabase } from '@/lib/supabase'
 import SponsorCarousel from '@/components/SponsorCarousel'
+import PhotoViewer from '@/components/PhotoViewer'
+import Navbar from '@/components/Navbar'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -19,13 +20,14 @@ function abbrevName(full: string | null | undefined): string {
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type Team = { id: string; name: string; member1?: string | null; member2?: string | null }
+type Team = { id: string; name: string; member1?: string | null; member2?: string | null; yellow_cards?: number }
 type Catch = { id: string; team_id: string; weight_g: number; fish_type: string }
 type TeamScore = {
   id: string
   name: string
   member1?: string | null
   member2?: string | null
+  yellow_cards: number
   totalWeight: number
   catchCount: number
   heaviestWeight: number
@@ -56,6 +58,7 @@ function calculateScores(teams: Team[], catches: Catch[]): TeamScore[] {
         name: team.name,
         member1: team.member1,
         member2: team.member2,
+        yellow_cards: team.yellow_cards ?? 0,
         totalWeight,
         catchCount: teamCatches.length,
         heaviestWeight: heaviest?.weight_g ?? 0,
@@ -63,6 +66,20 @@ function calculateScores(teams: Team[], catches: Catch[]): TeamScore[] {
       }
     })
     .sort((a, b) => b.totalWeight - a.totalWeight)
+}
+
+function PenaltyCards({ yellow_cards }: { yellow_cards: number }) {
+  if (yellow_cards === 0) return null
+  if (yellow_cards >= 2) return (
+    <span className="inline-flex items-center gap-0.5 ml-1.5" title="Diskvalifikován">
+      <span className="inline-block w-[9px] h-[13px] rounded-[2px] bg-red-500 rotate-[-6deg] shadow-sm" />
+    </span>
+  )
+  return (
+    <span className="inline-flex items-center gap-0.5 ml-1.5" title="Žlutá karta">
+      <span className="inline-block w-[9px] h-[13px] rounded-[2px] bg-yellow-400 rotate-[-6deg] shadow-sm" />
+    </span>
+  )
 }
 
 const RANKS = [
@@ -123,7 +140,7 @@ function BarChart({ catches }: { catches: CatchDetail[] }) {
 function TeamDetail({ team }: { team: TeamScore }) {
   const [catches, setCatches] = useState<CatchDetail[]>([])
   const [loading, setLoading] = useState(true)
-  const [lightbox, setLightbox] = useState<string | null>(null)
+  const [lightbox, setLightbox] = useState<{ photos: string[]; index: number } | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -131,6 +148,7 @@ function TeamDetail({ team }: { team: TeamScore }) {
         .from('catches')
         .select('id, fish_type, weight_g, length_mm, created_at, photo_url_1, photo_url_2, photo_url_3')
         .eq('team_id', team.id)
+        .eq('status', 'approved')
         .order('weight_g', { ascending: false })
       setCatches(data ?? [])
       setLoading(false)
@@ -218,10 +236,10 @@ function TeamDetail({ team }: { team: TeamScore }) {
                   {isTop3 && <span className="text-[10px] font-bold bg-[var(--ds-gold-pale)] text-[oklch(40%_0.13_82)] px-2 py-0.5 rounded-full mt-1 inline-block">TOP 3</span>}
                 </div>
                 <div className="flex gap-1 shrink-0">
-                  {[c.photo_url_1, c.photo_url_2, c.photo_url_3].filter(Boolean).map((url, pi) => (
+                  {[c.photo_url_1, c.photo_url_2, c.photo_url_3].filter(Boolean).map((url, pi, arr) => (
                     <button
                       key={pi}
-                      onClick={() => setLightbox(url!)}
+                      onClick={() => setLightbox({ photos: arr as string[], index: pi })}
                       className="w-9 h-9 rounded-lg overflow-hidden border border-[var(--ds-border)] shrink-0 active:opacity-70"
                     >
                       <Image src={url!} alt="foto" width={36} height={36} className="object-cover" />
@@ -235,24 +253,11 @@ function TeamDetail({ team }: { team: TeamScore }) {
       </div>
 
       {lightbox && (
-        <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
-          onClick={() => setLightbox(null)}
-        >
-          <Image
-            src={lightbox}
-            alt="foto"
-            fill
-            className="object-contain"
-            onClick={e => e.stopPropagation()}
-          />
-          <button
-            onClick={() => setLightbox(null)}
-            className="absolute top-4 right-4 text-white/70 hover:text-white text-3xl leading-none"
-          >
-            ×
-          </button>
-        </div>
+        <PhotoViewer
+          photos={lightbox.photos}
+          initialIndex={lightbox.index}
+          onClose={() => setLightbox(null)}
+        />
       )}
     </div>
   )
@@ -274,33 +279,13 @@ export default function Leaderboard() {
   const [loading, setLoading] = useState(true)
   const [updatedAt, setUpdatedAt] = useState<Date>(new Date())
   const [selectedTeam, setSelectedTeam] = useState<TeamScore | null>(null)
-  const [session, setSession] = useState<{ userId: string } | null | undefined>(undefined)
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [teamName, setTeamName] = useState<string | null>(null)
-  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
     async function load() {
-      const { data: { session } } = await supabase.auth.getSession()
-
       const [{ data: teams }, { data: catches }] = await Promise.all([
-        supabase.from('teams').select('id, name, auth_user_id, member1, member2'),
-        supabase.from('catches').select('id, team_id, weight_g, fish_type'),
+        supabase.from('teams').select('id, name, auth_user_id, member1, member2, yellow_cards'),
+        supabase.from('catches').select('id, team_id, weight_g, fish_type').eq('status', 'approved'),
       ])
-
-      if (session?.user) {
-        setSession({ userId: session.user.id })
-        const { data: myTeam } = await supabase
-          .from('teams')
-          .select('name, is_admin')
-          .eq('auth_user_id', session.user.id)
-          .single()
-        setIsAdmin(myTeam?.is_admin ?? false)
-        setTeamName(myTeam?.name ?? null)
-      } else {
-        setSession(null)
-        setIsAdmin(false)
-      }
       if (teams && catches) {
         setScores(calculateScores(teams, catches))
         setUpdatedAt(new Date())
@@ -320,132 +305,7 @@ export default function Leaderboard() {
   return (
     <div className="min-h-screen">
 
-      {/* Navbar */}
-      <header className="bg-[var(--ds-forest)] border-b border-[oklch(100%_0_0/0.08)] shadow-[0_2px_12px_oklch(16%_0.02_80/0.18)] sticky top-0 z-10">
-        <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
-
-          {/* Left: logo + title */}
-          <div className="flex items-center gap-2.5">
-            <Image src="/image.png" alt="Hlučín Top 3" width={36} height={36} className="rounded-xl shrink-0" />
-            <p className="font-bold text-white text-sm">HLUČÍN TOP 3</p>
-          </div>
-
-          {/* Desktop nav — always visible on sm+ */}
-          <div className="hidden sm:flex items-center gap-2">
-            {session === null && (
-              <>
-                <Link href="/informace" className="text-sm font-semibold text-[oklch(100%_0_0/0.70)] hover:text-white transition-colors px-3 py-2 rounded-lg">
-                  Informace
-                </Link>
-                <Link href="/sektory" className="text-sm font-semibold text-[oklch(100%_0_0/0.70)] hover:text-white transition-colors px-3 py-2 rounded-lg">
-                  Sektory
-                </Link>
-              </>
-            )}
-            {session && teamName && (
-              <>
-                <div className="flex flex-col items-end shrink-0 max-w-[160px]">
-                  <span className="text-[11px] text-[oklch(100%_0_0/0.65)] leading-tight">Přihlášen jako</span>
-                  <span className="text-sm font-semibold text-white leading-tight truncate w-full text-right">{teamName}</span>
-                </div>
-                <div className="w-px h-5 bg-[oklch(100%_0_0/0.15)] mx-1" />
-                <Link href="/informace" className="text-sm font-semibold text-white bg-[oklch(100%_0_0/0.15)] hover:bg-[oklch(100%_0_0/0.22)] transition-colors px-3 py-2 rounded-lg">
-                  Informace
-                </Link>
-                <Link href="/sektory" className="text-sm font-semibold text-white bg-[oklch(100%_0_0/0.15)] hover:bg-[oklch(100%_0_0/0.22)] transition-colors px-3 py-2 rounded-lg">
-                  Sektory
-                </Link>
-                <Link href="/dashboard" className="text-sm font-semibold text-white bg-[oklch(100%_0_0/0.15)] hover:bg-[oklch(100%_0_0/0.22)] transition-colors px-3 py-2 rounded-lg">
-                  Úlovky
-                </Link>
-                {isAdmin && (
-                  <Link href="/admin" className="text-sm font-semibold text-[var(--ds-forest)] bg-white hover:bg-[var(--ds-sand-100)] transition-colors px-3 py-2 rounded-lg">
-                    Admin
-                  </Link>
-                )}
-              </>
-            )}
-            {session === undefined ? null : session ? (
-              <button
-                onClick={async () => { await supabase.auth.signOut(); setSession(null); setTeamName(null); setIsAdmin(false) }}
-                className="p-2 rounded-lg text-[oklch(100%_0_0/0.55)] hover:text-white hover:bg-[oklch(100%_0_0/0.12)] transition-colors"
-                title="Odhlásit se"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            ) : (
-              <Link href="/login" className="text-sm font-semibold text-[var(--ds-forest)] bg-white hover:bg-[var(--ds-sand-100)] transition-colors px-4 py-2 rounded-lg">
-                Přihlásit se
-              </Link>
-            )}
-          </div>
-
-          {/* Mobile: not logged in — show links inline */}
-          {session === null && (
-            <div className="sm:hidden flex items-center gap-1">
-              <Link href="/informace" className="text-sm font-semibold text-[oklch(100%_0_0/0.70)] hover:text-white transition-colors px-2.5 py-2 rounded-lg">
-                Informace
-              </Link>
-              <Link href="/sektory" className="text-sm font-semibold text-[oklch(100%_0_0/0.70)] hover:text-white transition-colors px-2.5 py-2 rounded-lg">
-                Sektory
-              </Link>
-              <Link href="/login" className="text-sm font-semibold text-[var(--ds-forest)] bg-white hover:bg-[var(--ds-sand-100)] transition-colors px-3 py-2 rounded-lg">
-                Přihlásit se
-              </Link>
-            </div>
-          )}
-
-          {/* Mobile: logged in — hamburger in middle, logout at end */}
-          {session && (
-            <>
-              <Link href="/dashboard"
-                className="sm:hidden text-sm font-bold text-white bg-[oklch(100%_0_0/0.15)] hover:bg-[oklch(100%_0_0/0.22)] transition-colors px-3 py-2 rounded-lg whitespace-nowrap">
-                + Přidat úlovek
-              </Link>
-              <button
-                onClick={() => setMenuOpen(o => !o)}
-                className="sm:hidden p-2 rounded-lg text-[oklch(100%_0_0/0.70)] hover:text-white hover:bg-[oklch(100%_0_0/0.12)] transition-colors"
-                aria-label="Menu"
-              >
-                {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </button>
-            </>
-          )}
-        </div>
-
-        {/* Mobile dropdown — only when logged in */}
-        {menuOpen && session && (
-          <div className="sm:hidden border-t border-[oklch(100%_0_0/0.08)] bg-[var(--ds-forest)] px-4 py-3 flex flex-col gap-1">
-            <Link href="/informace" onClick={() => setMenuOpen(false)}
-              className="text-sm font-semibold text-[oklch(100%_0_0/0.80)] hover:text-white hover:bg-[oklch(100%_0_0/0.10)] px-3 py-2.5 rounded-lg transition-colors">
-              Informace
-            </Link>
-            <Link href="/sektory" onClick={() => setMenuOpen(false)}
-              className="text-sm font-semibold text-[oklch(100%_0_0/0.80)] hover:text-white hover:bg-[oklch(100%_0_0/0.10)] px-3 py-2.5 rounded-lg transition-colors">
-              Sektory
-            </Link>
-            <Link href="/dashboard" onClick={() => setMenuOpen(false)}
-              className="text-sm font-semibold text-[oklch(100%_0_0/0.80)] hover:text-white hover:bg-[oklch(100%_0_0/0.10)] px-3 py-2.5 rounded-lg transition-colors">
-              Úlovky
-            </Link>
-            {isAdmin && (
-              <Link href="/admin" onClick={() => setMenuOpen(false)}
-                className="text-sm font-semibold text-[oklch(100%_0_0/0.80)] hover:text-white hover:bg-[oklch(100%_0_0/0.10)] px-3 py-2.5 rounded-lg transition-colors">
-                Admin
-              </Link>
-            )}
-            <div className="h-px bg-[oklch(100%_0_0/0.10)] my-1" />
-            <button
-              onClick={async () => { await supabase.auth.signOut(); setSession(null); setTeamName(null); setIsAdmin(false); setMenuOpen(false) }}
-              className="flex items-center gap-2 text-sm font-semibold text-[oklch(100%_0_0/0.55)] hover:text-white hover:bg-[oklch(100%_0_0/0.10)] px-3 py-2.5 rounded-lg transition-colors w-full text-left"
-            >
-              <LogOut className="w-4 h-4" />
-              Odhlásit se
-            </button>
-          </div>
-        )}
-      </header>
-
+      <Navbar />
       <SponsorCarousel />
 
       <main className="max-w-3xl mx-auto px-4 py-6 flex flex-col gap-4">
@@ -499,7 +359,7 @@ export default function Leaderboard() {
                     {i + 1}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-[var(--ds-ink)] truncate text-[17px]">{team.name}</p>
+                    <p className="font-bold text-[var(--ds-ink)] truncate text-[17px] flex items-center gap-1">{team.name}<PenaltyCards yellow_cards={team.yellow_cards} /></p>
                     {(team.member1 || team.member2) && (
                       <p className="text-[12px] text-[var(--ds-ink-4)] truncate">
                         <span className="sm:hidden">{[team.member1, team.member2].filter(Boolean).map(abbrevName).join(' · ')}</span>
@@ -552,8 +412,8 @@ export default function Leaderboard() {
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div className="flex flex-col min-w-0">
-              <DialogTitle className="font-extrabold text-[var(--ds-ink)] text-[15px] truncate leading-tight">
-                {selectedTeam?.name}
+              <DialogTitle className="font-extrabold text-[var(--ds-ink)] text-[15px] truncate leading-tight flex items-center gap-1">
+                {selectedTeam?.name}<PenaltyCards yellow_cards={selectedTeam?.yellow_cards ?? 0} />
               </DialogTitle>
               {(selectedTeam?.member1 || selectedTeam?.member2) && (
                 <p className="text-[12px] text-[var(--ds-ink-4)] truncate">

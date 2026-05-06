@@ -1,11 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Image from 'next/image'
-import Link from 'next/link'
 import { Pencil, X, Check } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import SponsorCarousel from '@/components/SponsorCarousel'
+import Navbar from '@/components/Navbar'
 
 type InformaceContent = {
   losovani_datum: string
@@ -187,23 +186,7 @@ export default function InformacePage() {
   return (
     <div className="min-h-screen">
 
-      {/* Navbar */}
-      <header className="bg-[var(--ds-forest)] border-b border-[oklch(100%_0_0/0.08)] shadow-[0_2px_12px_oklch(16%_0.02_80/0.18)] sticky top-0 z-10">
-        <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
-          <Link href="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-            <Image src="/image.png" alt="Hlučín Top 3" width={36} height={36} className="rounded-xl shrink-0" />
-            <p className="font-bold text-white text-sm">HLUČÍN TOP 3</p>
-          </Link>
-          <div className="flex items-center gap-2">
-            <Link href="/" className="text-sm font-semibold text-[oklch(100%_0_0/0.70)] hover:text-white transition-colors px-3 py-2 rounded-lg">
-              Výsledky
-            </Link>
-            <Link href="/informace" className="text-sm font-semibold text-white bg-[oklch(100%_0_0/0.15)] px-3 py-2 rounded-lg">
-              Informace
-            </Link>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       <SponsorCarousel />
 

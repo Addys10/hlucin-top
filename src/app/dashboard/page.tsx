@@ -3,13 +3,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import Link from 'next/link'
-import { Camera, Fish, LogOut, X } from 'lucide-react'
+import { Camera, Fish, X } from 'lucide-react'
+import PhotoViewer from '@/components/PhotoViewer'
+import Navbar from '@/components/Navbar'
 import imageCompression from 'browser-image-compression'
 import { supabase } from '@/lib/supabase'
 
-type Team = { id: string; name: string; member1?: string | null; member2?: string | null }
-type Catch = { id: string; fish_type: string; weight_g: number; length_mm: number; created_at: string; photo_url_1?: string; photo_url_2?: string; photo_url_3?: string }
+type Team = { id: string; name: string; member1?: string | null; member2?: string | null; yellow_cards?: number }
+type Catch = { id: string; fish_type: string; weight_g: number; length_mm: number; created_at: string; photo_url_1?: string; photo_url_2?: string; photo_url_3?: string; status: 'pending' | 'approved' | 'rejected' }
 
 type UploadStatus = 'idle' | 'compressing' | 'uploading' | 'done' | 'error'
 
@@ -128,7 +129,7 @@ export default function Dashboard() {
   const [preview1, setPreview1] = useState<string | null>(null)
   const [preview2, setPreview2] = useState<string | null>(null)
   const [preview3, setPreview3] = useState<string | null>(null)
-  const [lightbox, setLightbox] = useState<string | null>(null)
+  const [lightbox, setLightbox] = useState<{ photos: string[]; index: number } | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -137,7 +138,7 @@ export default function Dashboard() {
 
       const { data: teamData } = await supabase
         .from('teams')
-        .select('id, name, member1, member2')
+        .select('id, name, member1, member2, yellow_cards')
         .eq('auth_user_id', user.id)
         .single()
 
@@ -146,7 +147,7 @@ export default function Dashboard() {
 
       const { data: catchData } = await supabase
         .from('catches')
-        .select('id, fish_type, weight_g, length_mm, created_at, photo_url_1, photo_url_2, photo_url_3')
+        .select('id, fish_type, weight_g, length_mm, created_at, photo_url_1, photo_url_2, photo_url_3, status')
         .eq('team_id', teamData.id)
         .order('created_at', { ascending: false })
 
@@ -237,11 +238,6 @@ export default function Dashboard() {
     }
   }
 
-  async function handleLogout() {
-    await supabase.auth.signOut()
-    router.push('/')
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -253,24 +249,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen">
 
-      {/* Navbar */}
-      <header className="bg-[var(--ds-forest)] border-b border-[oklch(100%_0_0/0.08)] shadow-[0_2px_12px_oklch(16%_0.02_80/0.18)] sticky top-0 z-10">
-        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between gap-4">
-          <Link href="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-            <Image src="/image.png" alt="Hlučín Top 3" width={32} height={32} className="rounded-lg shrink-0" />
-            <span className="font-bold text-white text-base">HLUČÍN TOP 3</span>
-          </Link>
-          <div className="flex items-center gap-3">
-            <Link href="/" className="text-sm font-semibold text-[oklch(100%_0_0/0.70)] hover:text-white transition-colors">
-              Výsledky
-            </Link>
-            <button onClick={handleLogout} className="flex items-center gap-1.5 text-xs text-[oklch(100%_0_0/0.55)] hover:text-white transition-colors">
-              <LogOut className="w-4 h-4" />
-              Odhlásit
-            </button>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       <main className="max-w-lg mx-auto px-4 py-6 flex flex-col gap-4">
 
@@ -290,6 +269,15 @@ export default function Dashboard() {
         <div className="bg-white border border-[var(--ds-border)] rounded-[24px] shadow-[0_1px_3px_oklch(16%_0.02_80/0.07),0_1px_2px_oklch(16%_0.02_80/0.04)] p-6 mb-4">
           <h2 className="text-[16px] font-bold text-[var(--ds-ink)] mb-5">Přidat úlovek</h2>
 
+          {(team?.yellow_cards ?? 0) >= 2 ? (
+            <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3.5">
+              <span className="inline-block w-[10px] h-[14px] rounded-[2px] bg-red-500 rotate-[-6deg] shadow-sm shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-red-700 text-sm">Diskvalifikován</p>
+                <p className="text-red-600 text-[13px] mt-0.5">Váš tým obdržel červenou kartu a nemůže přidávat další úlovky.</p>
+              </div>
+            </div>
+          ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
             {/* Fish type */}
@@ -370,6 +358,7 @@ export default function Dashboard() {
               {submitting ? 'Ukládám...' : 'Uložit úlovek'}
             </button>
           </form>
+          )}
         </div>
 
         {/* Catches list */}
@@ -385,7 +374,18 @@ export default function Dashboard() {
               <div key={c.id} className="flex items-center gap-3 px-4 py-3.5 border-b last:border-0 border-[var(--ds-border)]">
                 <div className="w-6 text-center text-[11px] text-[var(--ds-ink-4)] font-mono shrink-0">#{catches.length - i}</div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[15px] font-bold text-[var(--ds-ink)]">{c.fish_type}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-[15px] font-bold text-[var(--ds-ink)]">{c.fish_type}</p>
+                    {c.status === 'pending' && (
+                      <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700">Čeká na schválení</span>
+                    )}
+                    {c.status === 'approved' && (
+                      <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-green-100 text-green-700">Schváleno</span>
+                    )}
+                    {c.status === 'rejected' && (
+                      <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-red-100 text-red-600">Zamítnuto</span>
+                    )}
+                  </div>
                   <p className="text-[12px] text-[var(--ds-ink-4)]">
                     {new Date(c.created_at).toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </p>
@@ -398,7 +398,7 @@ export default function Dashboard() {
                     <button
                       key={pi}
                       type="button"
-                      onClick={() => setLightbox(url)}
+                      onClick={() => setLightbox({ photos: [c.photo_url_1, c.photo_url_2, c.photo_url_3].filter(Boolean) as string[], index: pi })}
                       className="w-9 h-9 rounded-lg overflow-hidden border border-[var(--ds-border)] shrink-0 hover:opacity-80 transition-opacity"
                     >
                       <Image src={url} alt={`Fotka ${pi + 1}`} width={36} height={36} className="object-cover" />
@@ -416,23 +416,12 @@ export default function Dashboard() {
 
       </main>
 
-      {/* Lightbox */}
       {lightbox && (
-        <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
-          onClick={() => setLightbox(null)}
-        >
-          <button
-            type="button"
-            onClick={() => setLightbox(null)}
-            className="absolute top-4 right-4 text-white bg-white/10 hover:bg-white/20 rounded-full p-2 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-          <div className="relative w-full h-full" onClick={e => e.stopPropagation()}>
-            <Image src={lightbox} alt="Fotka" fill className="object-contain" onClick={() => setLightbox(null)} />
-          </div>
-        </div>
+        <PhotoViewer
+          photos={lightbox.photos}
+          initialIndex={lightbox.index}
+          onClose={() => setLightbox(null)}
+        />
       )}
     </div>
   )
