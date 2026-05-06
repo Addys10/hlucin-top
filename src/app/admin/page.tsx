@@ -9,7 +9,8 @@ import imageCompression from 'browser-image-compression'
 import { supabase } from '@/lib/supabase'
 
 type Team = { id: string; name: string; auth_user_id: string; member1?: string | null; member2?: string | null }
-type Tab = 'teams' | 'catch'
+type Tab = 'teams' | 'catch' | 'catches'
+type Catch = { id: string; team_id: string; fish_type: string; weight_g: number; photo_url_1: string; photo_url_2: string; photo_url_3: string; created_at: string }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -76,6 +77,37 @@ function PhotoPicker({ label, preview, onChange, onClear, disabled }: {
           <span className="text-sm text-[var(--ds-ink-4)]">Vybrat fotku</span>
         </button>
       )}
+      <input ref={ref} type="file" accept="image/*" className="hidden" disabled={disabled}
+        onChange={e => { const f = e.target.files?.[0]; if (f) onChange(f); e.target.value = '' }} />
+    </div>
+  )
+}
+
+// ─── ReplacePhoto ─────────────────────────────────────────────────────────────
+
+function ReplacePhoto({ label, preview, onChange, disabled }: {
+  label: string
+  preview: string | null
+  onChange: (f: File) => void
+  disabled: boolean
+}) {
+  const ref = useRef<HTMLInputElement>(null)
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-[10px] font-semibold text-[var(--ds-ink-4)] truncate">{label}</span>
+      <button
+        type="button"
+        onClick={() => ref.current?.click()}
+        disabled={disabled}
+        className="relative rounded-lg overflow-hidden border border-[var(--ds-border)] disabled:opacity-50"
+        style={{ aspectRatio: '4/3' }}
+        title="Klikni pro výměnu fotky"
+      >
+        {preview && <Image src={preview} alt="náhled" fill className="object-cover" />}
+        <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 hover:opacity-100 transition-opacity">
+          <Camera className="w-5 h-5 text-white" />
+        </div>
+      </button>
       <input ref={ref} type="file" accept="image/*" className="hidden" disabled={disabled}
         onChange={e => { const f = e.target.files?.[0]; if (f) onChange(f); e.target.value = '' }} />
     </div>
@@ -442,6 +474,246 @@ function AddCatchTab({ teams }: { teams: Team[] }) {
   )
 }
 
+// ─── Catches tab ─────────────────────────────────────────────────────────────
+
+function CatchesTab({ teams }: { teams: Team[] }) {
+  const [selectedTeamId, setSelectedTeamId] = useState('')
+  const [catches, setCatches] = useState<Catch[]>([])
+  const [loadingCatches, setLoadingCatches] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editFishType, setEditFishType] = useState<'Kapr' | 'Amur'>('Kapr')
+  const [editWeightKg, setEditWeightKg] = useState('')
+  const [editPhoto1File, setEditPhoto1File] = useState<File | null>(null)
+  const [editPhoto2File, setEditPhoto2File] = useState<File | null>(null)
+  const [editPhoto3File, setEditPhoto3File] = useState<File | null>(null)
+  const [editPreview1, setEditPreview1] = useState<string | null>(null)
+  const [editPreview2, setEditPreview2] = useState<string | null>(null)
+  const [editPreview3, setEditPreview3] = useState<string | null>(null)
+  const [savingId, setSavingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  async function loadCatches(teamId: string) {
+    setLoadingCatches(true)
+    const { data } = await supabase
+      .from('catches')
+      .select('*')
+      .eq('team_id', teamId)
+      .order('created_at', { ascending: false })
+    setCatches(data ?? [])
+    setLoadingCatches(false)
+  }
+
+  function handleTeamChange(teamId: string) {
+    setSelectedTeamId(teamId)
+    setEditingId(null)
+    setCatches([])
+    if (teamId) loadCatches(teamId)
+  }
+
+  function startEdit(c: Catch) {
+    setEditingId(c.id)
+    setEditFishType(c.fish_type as 'Kapr' | 'Amur')
+    setEditWeightKg(String(c.weight_g / 1000))
+    setEditPhoto1File(null); setEditPreview1(c.photo_url_1)
+    setEditPhoto2File(null); setEditPreview2(c.photo_url_2)
+    setEditPhoto3File(null); setEditPreview3(c.photo_url_3)
+  }
+
+  function cancelEdit() {
+    setEditingId(null)
+    setEditPhoto1File(null); setEditPreview1(null)
+    setEditPhoto2File(null); setEditPreview2(null)
+    setEditPhoto3File(null); setEditPreview3(null)
+  }
+
+  function setEditPhoto(slot: 1 | 2 | 3, file: File) {
+    const url = URL.createObjectURL(file)
+    if (slot === 1) { setEditPhoto1File(file); setEditPreview1(url) }
+    else if (slot === 2) { setEditPhoto2File(file); setEditPreview2(url) }
+    else { setEditPhoto3File(file); setEditPreview3(url) }
+  }
+
+  async function saveEdit(c: Catch) {
+    const weight_g = Math.round(parseFloat(editWeightKg) * 1000)
+    if (!editWeightKg || isNaN(weight_g) || weight_g <= 0) { alert('Zadejte platnou váhu.'); return }
+
+    setSavingId(c.id)
+    try {
+      let photo_url_1: string | undefined
+      let photo_url_2: string | undefined
+      let photo_url_3: string | undefined
+
+      const timestamp = Date.now()
+      const uploads: Promise<void>[] = []
+      if (editPhoto1File) uploads.push(compressAndUpload(editPhoto1File, `${c.team_id}/${timestamp}_1`).then(u => { photo_url_1 = u }))
+      if (editPhoto2File) uploads.push(compressAndUpload(editPhoto2File, `${c.team_id}/${timestamp}_2`).then(u => { photo_url_2 = u }))
+      if (editPhoto3File) uploads.push(compressAndUpload(editPhoto3File, `${c.team_id}/${timestamp}_3`).then(u => { photo_url_3 = u }))
+      await Promise.all(uploads)
+
+      await adminPost('/api/admin/update-catch', { catchId: c.id, fish_type: editFishType, weight_g, photo_url_1, photo_url_2, photo_url_3 })
+      setEditingId(null)
+      await loadCatches(selectedTeamId)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Chyba při ukládání.')
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  async function handleDelete(c: Catch) {
+    if (!confirm('Smazat tento úlovek?')) return
+    setDeletingId(c.id)
+    try {
+      await adminPost('/api/admin/delete-catch', { catchId: c.id })
+      setCatches(prev => prev.filter(x => x.id !== c.id))
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Chyba při mazání.')
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  const isSaving = (id: string) => savingId === id
+
+  return (
+    <div className="flex flex-col gap-4 mb-5">
+
+      {/* Team selector */}
+      <div className="bg-white border border-[var(--ds-border)] rounded-[18px] shadow-sm p-4">
+        <label className="text-[13px] font-semibold text-[var(--ds-ink-2)] block mb-2">Vyber tým</label>
+        <select
+          value={selectedTeamId}
+          onChange={e => handleTeamChange(e.target.value)}
+          className="w-full rounded-xl border-[1.5px] border-[var(--ds-border)] px-4 h-[50px] text-[16px] text-[var(--ds-ink)] outline-none focus:border-[var(--ds-forest-lt)] focus:shadow-[0_0_0_3px_var(--ds-forest-wash)] transition bg-white"
+        >
+          <option value="">— Vyberte tým —</option>
+          {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+        </select>
+      </div>
+
+      {/* Catches list */}
+      {selectedTeamId && (
+        <div className="bg-white border border-[var(--ds-border)] rounded-[18px] shadow-sm overflow-hidden">
+          <div className="px-4 py-3.5 text-[13px] font-bold text-[var(--ds-ink-3)] border-b border-[var(--ds-border)] bg-[var(--ds-sand-50)]">
+            Úlovky ({catches.length})
+          </div>
+
+          {loadingCatches ? (
+            <p className="text-center py-10 text-[var(--ds-ink-4)] text-sm">Načítám...</p>
+          ) : catches.length === 0 ? (
+            <p className="text-center py-10 text-[var(--ds-ink-4)] text-sm">Žádné úlovky</p>
+          ) : catches.map(c => {
+            const isEditing = editingId === c.id
+            const busy = isSaving(c.id)
+            return (
+              <div key={c.id} className="border-b last:border-0 border-[var(--ds-border)]">
+
+                {/* Summary row */}
+                <div className="flex items-center gap-3 px-4 py-3.5 hover:bg-[var(--ds-sand-50)]">
+                  <div className="w-14 h-14 rounded-lg overflow-hidden shrink-0 bg-[var(--ds-sand-100)]">
+                    <Image src={c.photo_url_1} alt="" width={56} height={56} className="object-cover w-full h-full" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-[var(--ds-ink)] text-[15px]">{c.fish_type}</p>
+                    <p className="text-[13px] text-[var(--ds-ink-3)]">{(c.weight_g / 1000).toFixed(3)} kg</p>
+                    <p className="text-xs text-[var(--ds-ink-5)]">{new Date(c.created_at).toLocaleDateString('cs-CZ')}</p>
+                  </div>
+                  <button
+                    onClick={() => isEditing ? cancelEdit() : startEdit(c)}
+                    className={`p-2 rounded-lg transition-colors ${isEditing ? 'text-[var(--ds-forest-lt)] bg-[var(--ds-forest-pale)]' : 'text-gray-300 hover:text-[var(--ds-forest-lt)] hover:bg-[var(--ds-forest-pale)]'}`}
+                    title="Upravit"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(c)}
+                    disabled={deletingId === c.id}
+                    className="p-2 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
+                    title="Smazat"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Inline edit form */}
+                {isEditing && (
+                  <div className="px-4 pb-5 pt-3 bg-[var(--ds-sand-50)] border-t border-[var(--ds-border)] flex flex-col gap-4">
+
+                    {/* Fish type */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[11px] font-bold uppercase tracking-[0.07em] text-[var(--ds-ink-4)]">Druh ryby</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {(['Kapr', 'Amur'] as const).map(type => (
+                          <button key={type} type="button" onClick={() => setEditFishType(type)} disabled={busy}
+                            className={`h-[44px] rounded-xl text-sm font-semibold border transition-colors ${
+                              editFishType === type
+                                ? type === 'Kapr'
+                                  ? 'bg-[var(--ds-forest)] text-white border-[var(--ds-forest)]'
+                                  : 'bg-[oklch(45%_0.10_55)] text-white border-[oklch(45%_0.10_55)]'
+                                : 'bg-white text-[var(--ds-ink-3)] border-[var(--ds-border)] hover:border-[var(--ds-border-strong)]'
+                            }`}>
+                            {type}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Weight */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] font-bold uppercase tracking-[0.07em] text-[var(--ds-ink-4)]">Váha (kg)</label>
+                      <input
+                        type="number" min="0" max="100" step="0.001"
+                        value={editWeightKg} onChange={e => setEditWeightKg(e.target.value)}
+                        disabled={busy}
+                        className="w-full rounded-xl border-[1.5px] border-[var(--ds-border)] bg-white px-3 h-[44px] text-[15px] text-[var(--ds-ink)] outline-none focus:border-[var(--ds-forest-lt)] focus:shadow-[0_0_0_3px_var(--ds-forest-wash)] transition disabled:opacity-50"
+                      />
+                    </div>
+
+                    {/* Photos — replace only */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[11px] font-bold uppercase tracking-[0.07em] text-[var(--ds-ink-4)]">Fotky (klikni pro výměnu)</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {([
+                          { slot: 1 as const, label: 'Levá strana', preview: editPreview1 },
+                          { slot: 2 as const, label: 'Pravá strana', preview: editPreview2 },
+                          { slot: 3 as const, label: 'Fotka váhy',   preview: editPreview3 },
+                        ]).map(({ slot, label, preview }) => (
+                          <ReplacePhoto key={slot} label={label} preview={preview} disabled={busy}
+                            onChange={f => setEditPhoto(slot, f)} />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => saveEdit(c)}
+                        disabled={busy}
+                        className="flex items-center gap-1.5 bg-[var(--ds-forest)] hover:bg-[var(--ds-forest-mid)] disabled:opacity-60 text-white font-semibold rounded-xl px-4 h-[38px] text-sm transition-colors"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        {busy ? 'Ukládám...' : 'Uložit'}
+                      </button>
+                      <button
+                        onClick={cancelEdit}
+                        disabled={busy}
+                        className="flex items-center gap-1.5 bg-white border border-[var(--ds-border)] hover:bg-[var(--ds-sand-100)] text-[var(--ds-ink-3)] font-semibold rounded-xl px-4 h-[38px] text-sm transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        Zrušit
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Admin page ───────────────────────────────────────────────────────────────
 
 export default function AdminPage() {
@@ -511,7 +783,7 @@ export default function AdminPage() {
 
         {/* Tabs */}
         <div className="flex gap-1 bg-white border border-[var(--ds-border)] rounded-xl p-1 shadow-sm mb-6">
-          {([['teams', 'Týmy'], ['catch', 'Přidat úlovek']] as [Tab, string][]).map(([key, label]) => (
+          {([['teams', 'Týmy'], ['catch', 'Přidat úlovek'], ['catches', 'Úlovky']] as [Tab, string][]).map(([key, label]) => (
             <button key={key} onClick={() => setTab(key)}
               className={`flex-1 h-10 rounded-lg font-semibold text-sm transition-all ${tab === key ? 'bg-[var(--ds-forest)] text-white shadow-sm' : 'bg-transparent text-[var(--ds-ink-3)] hover:bg-[var(--ds-sand-100)] hover:text-[var(--ds-ink)]'}`}>
               {label}
@@ -521,6 +793,7 @@ export default function AdminPage() {
 
         {tab === 'teams' && <TeamsTab teams={teams} onRefresh={loadTeams} />}
         {tab === 'catch' && <AddCatchTab teams={teams} />}
+        {tab === 'catches' && <CatchesTab teams={teams} />}
       </main>
     </div>
   )

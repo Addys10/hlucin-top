@@ -3,10 +3,19 @@
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ChevronRight, ArrowLeft, Fish, LogOut } from 'lucide-react'
+import { ChevronRight, ArrowLeft, Fish, LogOut, Menu, X } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { supabase } from '@/lib/supabase'
 import SponsorCarousel from '@/components/SponsorCarousel'
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function abbrevName(full: string | null | undefined): string {
+  if (!full) return ''
+  const parts = full.trim().split(/\s+/)
+  if (parts.length < 2) return full
+  return `${parts[0][0]}. ${parts.slice(1).join(' ')}`
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -266,6 +275,7 @@ export default function Leaderboard() {
   const [updatedAt, setUpdatedAt] = useState<Date>(new Date())
   const [selectedTeam, setSelectedTeam] = useState<TeamScore | null>(null)
   const [session, setSession] = useState<{ userId: string } | null | undefined>(undefined)
+  const [menuOpen, setMenuOpen] = useState(false)
   const [teamName, setTeamName] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
 
@@ -317,39 +327,45 @@ export default function Leaderboard() {
           {/* Left: logo + title */}
           <div className="flex items-center gap-2.5">
             <Image src="/image.png" alt="Hlučín Top 3" width={36} height={36} className="rounded-xl shrink-0" />
-            <p className="font-bold text-white text-sm hidden sm:block">HLUČÍN TOP 3</p>
+            <p className="font-bold text-white text-sm">HLUČÍN TOP 3</p>
           </div>
 
-          {/* Right: auth */}
-          <Link href="/informace" className="text-sm font-semibold text-[oklch(100%_0_0/0.70)] hover:text-white transition-colors px-3 py-2 rounded-lg">
-            Informace
-          </Link>
-
-          {session === undefined ? null : session ? (
-            <div className="flex items-center gap-2">
-              {session && teamName && (
-                <>
-                  <div className="hidden sm:flex flex-col items-end shrink-0 max-w-[160px]">
-                    <span className="text-[11px] text-[oklch(100%_0_0/0.65)] leading-tight">Přihlášen jako</span>
-                    <span className="text-sm font-semibold text-white leading-tight truncate w-full text-right">{teamName}</span>
-                  </div>
-                  <div className="hidden sm:block w-px h-5 bg-[oklch(100%_0_0/0.15)] mx-1" />
-                  {isAdmin && (
-                    <Link
-                      href="/admin"
-                      className="text-sm font-semibold text-[var(--ds-forest)] bg-white hover:bg-[var(--ds-sand-100)] transition-colors px-3 py-2 rounded-lg"
-                    >
-                      Admin
-                    </Link>
-                  )}
-                  <Link
-                    href="/dashboard"
-                    className="text-sm font-semibold text-white bg-[oklch(100%_0_0/0.15)] hover:bg-[oklch(100%_0_0/0.22)] transition-colors px-3 py-2 rounded-lg"
-                  >
-                    Úlovky
+          {/* Desktop nav — always visible on sm+ */}
+          <div className="hidden sm:flex items-center gap-2">
+            {session === null && (
+              <>
+                <Link href="/informace" className="text-sm font-semibold text-[oklch(100%_0_0/0.70)] hover:text-white transition-colors px-3 py-2 rounded-lg">
+                  Informace
+                </Link>
+                <Link href="/sektory" className="text-sm font-semibold text-[oklch(100%_0_0/0.70)] hover:text-white transition-colors px-3 py-2 rounded-lg">
+                  Sektory
+                </Link>
+              </>
+            )}
+            {session && teamName && (
+              <>
+                <div className="flex flex-col items-end shrink-0 max-w-[160px]">
+                  <span className="text-[11px] text-[oklch(100%_0_0/0.65)] leading-tight">Přihlášen jako</span>
+                  <span className="text-sm font-semibold text-white leading-tight truncate w-full text-right">{teamName}</span>
+                </div>
+                <div className="w-px h-5 bg-[oklch(100%_0_0/0.15)] mx-1" />
+                <Link href="/informace" className="text-sm font-semibold text-white bg-[oklch(100%_0_0/0.15)] hover:bg-[oklch(100%_0_0/0.22)] transition-colors px-3 py-2 rounded-lg">
+                  Informace
+                </Link>
+                <Link href="/sektory" className="text-sm font-semibold text-white bg-[oklch(100%_0_0/0.15)] hover:bg-[oklch(100%_0_0/0.22)] transition-colors px-3 py-2 rounded-lg">
+                  Sektory
+                </Link>
+                <Link href="/dashboard" className="text-sm font-semibold text-white bg-[oklch(100%_0_0/0.15)] hover:bg-[oklch(100%_0_0/0.22)] transition-colors px-3 py-2 rounded-lg">
+                  Úlovky
+                </Link>
+                {isAdmin && (
+                  <Link href="/admin" className="text-sm font-semibold text-[var(--ds-forest)] bg-white hover:bg-[var(--ds-sand-100)] transition-colors px-3 py-2 rounded-lg">
+                    Admin
                   </Link>
-                </>
-              )}
+                )}
+              </>
+            )}
+            {session === undefined ? null : session ? (
               <button
                 onClick={async () => { await supabase.auth.signOut(); setSession(null); setTeamName(null); setIsAdmin(false) }}
                 className="p-2 rounded-lg text-[oklch(100%_0_0/0.55)] hover:text-white hover:bg-[oklch(100%_0_0/0.12)] transition-colors"
@@ -357,16 +373,77 @@ export default function Leaderboard() {
               >
                 <LogOut className="w-4 h-4" />
               </button>
+            ) : (
+              <Link href="/login" className="text-sm font-semibold text-[var(--ds-forest)] bg-white hover:bg-[var(--ds-sand-100)] transition-colors px-4 py-2 rounded-lg">
+                Přihlásit se
+              </Link>
+            )}
+          </div>
+
+          {/* Mobile: not logged in — show links inline */}
+          {session === null && (
+            <div className="sm:hidden flex items-center gap-1">
+              <Link href="/informace" className="text-sm font-semibold text-[oklch(100%_0_0/0.70)] hover:text-white transition-colors px-2.5 py-2 rounded-lg">
+                Informace
+              </Link>
+              <Link href="/sektory" className="text-sm font-semibold text-[oklch(100%_0_0/0.70)] hover:text-white transition-colors px-2.5 py-2 rounded-lg">
+                Sektory
+              </Link>
+              <Link href="/login" className="text-sm font-semibold text-[var(--ds-forest)] bg-white hover:bg-[var(--ds-sand-100)] transition-colors px-3 py-2 rounded-lg">
+                Přihlásit se
+              </Link>
             </div>
-          ) : (
-            <Link
-              href="/login"
-              className="text-sm font-semibold text-[var(--ds-forest)] bg-white hover:bg-[var(--ds-sand-100)] transition-colors px-4 py-2 rounded-lg"
-            >
-              Přihlásit se
-            </Link>
+          )}
+
+          {/* Mobile: logged in — hamburger in middle, logout at end */}
+          {session && (
+            <>
+              <Link href="/dashboard"
+                className="sm:hidden text-sm font-bold text-white bg-[oklch(100%_0_0/0.15)] hover:bg-[oklch(100%_0_0/0.22)] transition-colors px-3 py-2 rounded-lg whitespace-nowrap">
+                + Přidat úlovek
+              </Link>
+              <button
+                onClick={() => setMenuOpen(o => !o)}
+                className="sm:hidden p-2 rounded-lg text-[oklch(100%_0_0/0.70)] hover:text-white hover:bg-[oklch(100%_0_0/0.12)] transition-colors"
+                aria-label="Menu"
+              >
+                {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+            </>
           )}
         </div>
+
+        {/* Mobile dropdown — only when logged in */}
+        {menuOpen && session && (
+          <div className="sm:hidden border-t border-[oklch(100%_0_0/0.08)] bg-[var(--ds-forest)] px-4 py-3 flex flex-col gap-1">
+            <Link href="/informace" onClick={() => setMenuOpen(false)}
+              className="text-sm font-semibold text-[oklch(100%_0_0/0.80)] hover:text-white hover:bg-[oklch(100%_0_0/0.10)] px-3 py-2.5 rounded-lg transition-colors">
+              Informace
+            </Link>
+            <Link href="/sektory" onClick={() => setMenuOpen(false)}
+              className="text-sm font-semibold text-[oklch(100%_0_0/0.80)] hover:text-white hover:bg-[oklch(100%_0_0/0.10)] px-3 py-2.5 rounded-lg transition-colors">
+              Sektory
+            </Link>
+            <Link href="/dashboard" onClick={() => setMenuOpen(false)}
+              className="text-sm font-semibold text-[oklch(100%_0_0/0.80)] hover:text-white hover:bg-[oklch(100%_0_0/0.10)] px-3 py-2.5 rounded-lg transition-colors">
+              Úlovky
+            </Link>
+            {isAdmin && (
+              <Link href="/admin" onClick={() => setMenuOpen(false)}
+                className="text-sm font-semibold text-[oklch(100%_0_0/0.80)] hover:text-white hover:bg-[oklch(100%_0_0/0.10)] px-3 py-2.5 rounded-lg transition-colors">
+                Admin
+              </Link>
+            )}
+            <div className="h-px bg-[oklch(100%_0_0/0.10)] my-1" />
+            <button
+              onClick={async () => { await supabase.auth.signOut(); setSession(null); setTeamName(null); setIsAdmin(false); setMenuOpen(false) }}
+              className="flex items-center gap-2 text-sm font-semibold text-[oklch(100%_0_0/0.55)] hover:text-white hover:bg-[oklch(100%_0_0/0.10)] px-3 py-2.5 rounded-lg transition-colors w-full text-left"
+            >
+              <LogOut className="w-4 h-4" />
+              Odhlásit se
+            </button>
+          </div>
+        )}
       </header>
 
       <SponsorCarousel />
@@ -425,7 +502,8 @@ export default function Leaderboard() {
                     <p className="font-bold text-[var(--ds-ink)] truncate text-[17px]">{team.name}</p>
                     {(team.member1 || team.member2) && (
                       <p className="text-[12px] text-[var(--ds-ink-4)] truncate">
-                        {[team.member1, team.member2].filter(Boolean).join(' · ')}
+                        <span className="sm:hidden">{[team.member1, team.member2].filter(Boolean).map(abbrevName).join(' · ')}</span>
+                        <span className="hidden sm:inline">{[team.member1, team.member2].filter(Boolean).join(' · ')}</span>
                       </p>
                     )}
                   </div>
