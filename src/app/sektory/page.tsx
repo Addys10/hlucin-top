@@ -1,10 +1,12 @@
 import Image from 'next/image'
 import Navbar from '@/components/Navbar'
+import SponsorCarousel from '@/components/SponsorCarousel'
 
 export default function SektoryPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
+      <SponsorCarousel />
 
       <main className="max-w-3xl mx-auto px-4 py-6 flex flex-col gap-4 w-full flex-1">
         <div>
