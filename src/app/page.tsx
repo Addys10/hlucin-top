@@ -310,15 +310,13 @@ export default function Leaderboard() {
 
       <main className="max-w-3xl mx-auto px-4 py-6 flex flex-col gap-4">
         <div className="mb-7">
-          <p className="text-[11px] font-bold uppercase tracking-[0.10em] text-[var(--ds-forest-pale)] mb-1">Živé pořadí</p>
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-[28px] font-extrabold text-white leading-tight tracking-tight">Výsledky závodu</h2>
               <p className="text-sm text-white/60 mt-1">Součet 3 nejtěžších úlovků na tým</p>
             </div>
-            <div className="flex items-center gap-2 bg-white border border-[var(--ds-border)] rounded-full px-4 py-2 shadow-sm font-mono text-[15px] font-medium text-[var(--ds-ink-2)] shrink-0 whitespace-nowrap">
-              <span className="w-2 h-2 rounded-full bg-[oklch(60%_0.20_148)] shrink-0 shadow-[0_0_0_0_oklch(60%_0.20_148)] animate-pulse" />
-              {loading ? 'Načítám...' : updatedAt.toLocaleTimeString('cs-CZ')}
+            <div className="bg-white border border-[var(--ds-border)] rounded-full px-4 py-2 shadow-sm text-[13px] font-medium text-[var(--ds-ink-3)] shrink-0 whitespace-nowrap">
+              {loading ? 'Načítám…' : `Aktualizováno ${updatedAt.toLocaleTimeString('cs-CZ')}`}
             </div>
           </div>
         </div>

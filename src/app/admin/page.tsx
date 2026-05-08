@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Camera, Check, Pencil, Trash2, X } from 'lucide-react'
 import Navbar from '@/components/Navbar'
+import PhotoViewer from '@/components/PhotoViewer'
 import imageCompression from 'browser-image-compression'
 import { supabase } from '@/lib/supabase'
+import { usePhotoSlots } from '@/hooks/usePhotoSlots'
 
 type Team = { id: string; name: string; auth_user_id: string; member1?: string | null; member2?: string | null; yellow_cards: number }
 type Tab = 'teams' | 'catch' | 'catches'
@@ -379,27 +381,9 @@ function AddCatchTab({ teams }: { teams: Team[] }) {
   const [teamId, setTeamId] = useState('')
   const [fishType, setFishType] = useState<'Kapr' | 'Amur'>('Kapr')
   const [weightKg, setWeightKg] = useState('')
-  const [photo1File, setPhoto1File] = useState<File | null>(null)
-  const [photo2File, setPhoto2File] = useState<File | null>(null)
-  const [photo3File, setPhoto3File] = useState<File | null>(null)
-  const [preview1, setPreview1] = useState<string | null>(null)
-  const [preview2, setPreview2] = useState<string | null>(null)
-  const [preview3, setPreview3] = useState<string | null>(null)
+  const photos = usePhotoSlots()
   const [status, setStatus] = useState<'idle' | 'compressing' | 'uploading' | 'done'>('idle')
   const [error, setError] = useState('')
-
-  function setPhoto(slot: 1 | 2 | 3, file: File) {
-    const url = URL.createObjectURL(file)
-    if (slot === 1) { setPhoto1File(file); setPreview1(url) }
-    else if (slot === 2) { setPhoto2File(file); setPreview2(url) }
-    else { setPhoto3File(file); setPreview3(url) }
-  }
-
-  function clearPhoto(slot: 1 | 2 | 3) {
-    if (slot === 1) { setPhoto1File(null); if (preview1) URL.revokeObjectURL(preview1); setPreview1(null) }
-    else if (slot === 2) { setPhoto2File(null); if (preview2) URL.revokeObjectURL(preview2); setPreview2(null) }
-    else { setPhoto3File(null); if (preview3) URL.revokeObjectURL(preview3); setPreview3(null) }
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -410,22 +394,22 @@ function AddCatchTab({ teams }: { teams: Team[] }) {
     if (!teamId) { setError('Vyberte tým.'); return }
     if (!weightKg || isNaN(weight_g) || weight_g <= 0) { setError('Zadejte platnou váhu.'); return }
     if (weight_g > 100_000) { setError('Váha nesmí překročit 100 kg.'); return }
-    if (!photo1File || !photo2File || !photo3File) { setError('Všechny tři fotky jsou povinné.'); return }
+    if (!photos.slots[0].file || !photos.slots[1].file || !photos.slots[2].file) { setError('Všechny tři fotky jsou povinné.'); return }
 
     try {
       setStatus('compressing')
       const timestamp = Date.now()
       const [photo_url_1, photo_url_2, photo_url_3] = await Promise.all([
-        compressAndUpload(photo1File, `${teamId}/${timestamp}_1`),
-        compressAndUpload(photo2File, `${teamId}/${timestamp}_2`),
-        compressAndUpload(photo3File, `${teamId}/${timestamp}_3`),
+        compressAndUpload(photos.slots[0].file!, `${teamId}/${timestamp}_1`),
+        compressAndUpload(photos.slots[1].file!, `${teamId}/${timestamp}_2`),
+        compressAndUpload(photos.slots[2].file!, `${teamId}/${timestamp}_3`),
       ])
 
       setStatus('uploading')
       await adminPost('/api/admin/add-catch', { team_id: teamId, fish_type: fishType, weight_g, photo_url_1, photo_url_2, photo_url_3 })
 
       setTeamId(''); setFishType('Kapr'); setWeightKg('')
-      clearPhoto(1); clearPhoto(2); clearPhoto(3)
+      photos.clearAll()
       setStatus('done')
       setTimeout(() => setStatus('idle'), 3000)
     } catch (err) {
@@ -480,10 +464,10 @@ function AddCatchTab({ teams }: { teams: Team[] }) {
 
         {/* Photos */}
         <div className="grid grid-cols-2 gap-3">
-          <PhotoPicker label="Levá strana" preview={preview1} onChange={f => setPhoto(1, f)} onClear={() => clearPhoto(1)} disabled={busy} />
-          <PhotoPicker label="Pravá strana" preview={preview2} onChange={f => setPhoto(2, f)} onClear={() => clearPhoto(2)} disabled={busy} />
+          <PhotoPicker label="Levá strana" preview={photos.slots[0].preview} onChange={f => photos.set(0, f)} onClear={() => photos.clear(0)} disabled={busy} />
+          <PhotoPicker label="Pravá strana" preview={photos.slots[1].preview} onChange={f => photos.set(1, f)} onClear={() => photos.clear(1)} disabled={busy} />
         </div>
-        <PhotoPicker label="Fotka váhy" preview={preview3} onChange={f => setPhoto(3, f)} onClear={() => clearPhoto(3)} disabled={busy} />
+        <PhotoPicker label="Fotka váhy" preview={photos.slots[2].preview} onChange={f => photos.set(2, f)} onClear={() => photos.clear(2)} disabled={busy} />
 
         {error && <p className="text-sm text-red-500">{error}</p>}
         {status === 'compressing' && (
@@ -522,15 +506,11 @@ function CatchesTab({ teams }: { teams: Team[] }) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editFishType, setEditFishType] = useState<'Kapr' | 'Amur'>('Kapr')
   const [editWeightKg, setEditWeightKg] = useState('')
-  const [editPhoto1File, setEditPhoto1File] = useState<File | null>(null)
-  const [editPhoto2File, setEditPhoto2File] = useState<File | null>(null)
-  const [editPhoto3File, setEditPhoto3File] = useState<File | null>(null)
-  const [editPreview1, setEditPreview1] = useState<string | null>(null)
-  const [editPreview2, setEditPreview2] = useState<string | null>(null)
-  const [editPreview3, setEditPreview3] = useState<string | null>(null)
+  const editPhotos = usePhotoSlots()
   const [savingId, setSavingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [statusingId, setStatusingId] = useState<string | null>(null)
+  const [lightbox, setLightbox] = useState<{ photos: string[]; index: number } | null>(null)
 
   async function loadPending() {
     setLoadingPending(true)
@@ -571,23 +551,14 @@ function CatchesTab({ teams }: { teams: Team[] }) {
     setEditingId(c.id)
     setEditFishType(c.fish_type as 'Kapr' | 'Amur')
     setEditWeightKg(String(c.weight_g / 1000))
-    setEditPhoto1File(null); setEditPreview1(c.photo_url_1)
-    setEditPhoto2File(null); setEditPreview2(c.photo_url_2)
-    setEditPhoto3File(null); setEditPreview3(c.photo_url_3)
+    editPhotos.setPreviewOnly(0, c.photo_url_1)
+    editPhotos.setPreviewOnly(1, c.photo_url_2)
+    editPhotos.setPreviewOnly(2, c.photo_url_3)
   }
 
   function cancelEdit() {
     setEditingId(null)
-    setEditPhoto1File(null); setEditPreview1(null)
-    setEditPhoto2File(null); setEditPreview2(null)
-    setEditPhoto3File(null); setEditPreview3(null)
-  }
-
-  function setEditPhoto(slot: 1 | 2 | 3, file: File) {
-    const url = URL.createObjectURL(file)
-    if (slot === 1) { setEditPhoto1File(file); setEditPreview1(url) }
-    else if (slot === 2) { setEditPhoto2File(file); setEditPreview2(url) }
-    else { setEditPhoto3File(file); setEditPreview3(url) }
+    editPhotos.clearAll()
   }
 
   async function saveEdit(c: Catch) {
@@ -602,9 +573,9 @@ function CatchesTab({ teams }: { teams: Team[] }) {
 
       const timestamp = Date.now()
       const uploads: Promise<void>[] = []
-      if (editPhoto1File) uploads.push(compressAndUpload(editPhoto1File, `${c.team_id}/${timestamp}_1`).then(u => { photo_url_1 = u }))
-      if (editPhoto2File) uploads.push(compressAndUpload(editPhoto2File, `${c.team_id}/${timestamp}_2`).then(u => { photo_url_2 = u }))
-      if (editPhoto3File) uploads.push(compressAndUpload(editPhoto3File, `${c.team_id}/${timestamp}_3`).then(u => { photo_url_3 = u }))
+      if (editPhotos.slots[0].file) uploads.push(compressAndUpload(editPhotos.slots[0].file, `${c.team_id}/${timestamp}_1`).then(u => { photo_url_1 = u }))
+      if (editPhotos.slots[1].file) uploads.push(compressAndUpload(editPhotos.slots[1].file, `${c.team_id}/${timestamp}_2`).then(u => { photo_url_2 = u }))
+      if (editPhotos.slots[2].file) uploads.push(compressAndUpload(editPhotos.slots[2].file, `${c.team_id}/${timestamp}_3`).then(u => { photo_url_3 = u }))
       await Promise.all(uploads)
 
       await adminPost('/api/admin/update-catch', { catchId: c.id, fish_type: editFishType, weight_g, photo_url_1, photo_url_2, photo_url_3 })
@@ -684,8 +655,16 @@ function CatchesTab({ teams }: { teams: Team[] }) {
 
                 {/* Summary row */}
                 <div className="flex items-center gap-3 px-4 py-3.5 hover:bg-[var(--ds-sand-50)]">
-                  <div className="w-14 h-14 rounded-lg overflow-hidden shrink-0 bg-[var(--ds-sand-100)]">
-                    <Image src={c.photo_url_1} alt="" width={56} height={56} className="object-cover w-full h-full" />
+                  <div className="flex gap-1 shrink-0">
+                    {[c.photo_url_1, c.photo_url_2, c.photo_url_3].filter(Boolean).map((url, pi, arr) => (
+                      <button
+                        key={pi}
+                        onClick={() => setLightbox({ photos: arr as string[], index: pi })}
+                        className="w-10 h-10 rounded-lg overflow-hidden border border-[var(--ds-border)] shrink-0 active:opacity-70"
+                      >
+                        <Image src={url!} alt="" width={40} height={40} className="object-cover w-full h-full" />
+                      </button>
+                    ))}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
@@ -773,12 +752,12 @@ function CatchesTab({ teams }: { teams: Team[] }) {
                       <label className="text-[11px] font-bold uppercase tracking-[0.07em] text-[var(--ds-ink-4)]">Fotky (klikni pro výměnu)</label>
                       <div className="grid grid-cols-3 gap-2">
                         {([
-                          { slot: 1 as const, label: 'Levá strana', preview: editPreview1 },
-                          { slot: 2 as const, label: 'Pravá strana', preview: editPreview2 },
-                          { slot: 3 as const, label: 'Fotka váhy',   preview: editPreview3 },
-                        ]).map(({ slot, label, preview }) => (
-                          <ReplacePhoto key={slot} label={label} preview={preview} disabled={busy}
-                            onChange={f => setEditPhoto(slot, f)} />
+                          { idx: 0, label: 'Levá strana' },
+                          { idx: 1, label: 'Pravá strana' },
+                          { idx: 2, label: 'Fotka váhy'   },
+                        ]).map(({ idx, label }) => (
+                          <ReplacePhoto key={idx} label={label} preview={editPhotos.slots[idx].preview} disabled={busy}
+                            onChange={f => editPhotos.set(idx, f)} />
                         ))}
                       </div>
                     </div>
@@ -822,8 +801,16 @@ function CatchesTab({ teams }: { teams: Team[] }) {
           <p className="text-center py-8 text-[var(--ds-ink-4)] text-sm">Žádné úlovky čekající na schválení</p>
         ) : pendingCatches.map(c => (
           <div key={c.id} className="flex items-center gap-3 px-4 py-3.5 border-b last:border-0 border-[var(--ds-border)] hover:bg-[var(--ds-sand-50)]">
-            <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-[var(--ds-sand-100)]">
-              <Image src={c.photo_url_1} alt="" width={48} height={48} className="object-cover w-full h-full" />
+            <div className="flex gap-1 shrink-0">
+              {[c.photo_url_1, c.photo_url_2, c.photo_url_3].filter(Boolean).map((url, pi, arr) => (
+                <button
+                  key={pi}
+                  onClick={() => setLightbox({ photos: arr as string[], index: pi })}
+                  className="w-10 h-10 rounded-lg overflow-hidden border border-[var(--ds-border)] shrink-0 active:opacity-70"
+                >
+                  <Image src={url!} alt="" width={40} height={40} className="object-cover w-full h-full" />
+                </button>
+              ))}
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-[var(--ds-ink)] text-[14px]">{c.fish_type} · {(c.weight_g / 1000).toFixed(3)} kg</p>
@@ -849,6 +836,14 @@ function CatchesTab({ teams }: { teams: Team[] }) {
           </div>
         ))}
       </div>
+
+      {lightbox && (
+        <PhotoViewer
+          photos={lightbox.photos}
+          initialIndex={lightbox.index}
+          onClose={() => setLightbox(null)}
+        />
+      )}
     </div>
   )
 }

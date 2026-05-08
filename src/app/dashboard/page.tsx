@@ -8,6 +8,7 @@ import PhotoViewer from '@/components/PhotoViewer'
 import Navbar from '@/components/Navbar'
 import imageCompression from 'browser-image-compression'
 import { supabase } from '@/lib/supabase'
+import { usePhotoSlots } from '@/hooks/usePhotoSlots'
 
 type Team = { id: string; name: string; member1?: string | null; member2?: string | null; yellow_cards?: number }
 type Catch = { id: string; fish_type: string; weight_g: number; length_mm: number; created_at: string; photo_url_1?: string; photo_url_2?: string; photo_url_3?: string; status: 'pending' | 'approved' | 'rejected' }
@@ -123,12 +124,7 @@ export default function Dashboard() {
 
   const [fishType, setFishType] = useState<'Kapr' | 'Amur'>('Kapr')
   const [weightKg, setWeightKg] = useState('')
-  const [photo1File, setPhoto1File] = useState<File | null>(null)
-  const [photo2File, setPhoto2File] = useState<File | null>(null)
-  const [photo3File, setPhoto3File] = useState<File | null>(null)
-  const [preview1, setPreview1] = useState<string | null>(null)
-  const [preview2, setPreview2] = useState<string | null>(null)
-  const [preview3, setPreview3] = useState<string | null>(null)
+  const photos = usePhotoSlots()
   const [lightbox, setLightbox] = useState<{ photos: string[]; index: number } | null>(null)
 
   useEffect(() => {
@@ -157,19 +153,6 @@ export default function Dashboard() {
     load()
   }, [router])
 
-  function setPhoto(slot: 1 | 2 | 3, file: File) {
-    const url = URL.createObjectURL(file)
-    if (slot === 1) { setPhoto1File(file); setPreview1(url) }
-    else if (slot === 2) { setPhoto2File(file); setPreview2(url) }
-    else { setPhoto3File(file); setPreview3(url) }
-  }
-
-  function clearPhoto(slot: 1 | 2 | 3) {
-    if (slot === 1) { setPhoto1File(null); if (preview1) URL.revokeObjectURL(preview1); setPreview1(null) }
-    else if (slot === 2) { setPhoto2File(null); if (preview2) URL.revokeObjectURL(preview2); setPreview2(null) }
-    else { setPhoto3File(null); if (preview3) URL.revokeObjectURL(preview3); setPreview3(null) }
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!team) return
@@ -188,7 +171,7 @@ export default function Dashboard() {
       setSubmitting(false)
       return
     }
-    if (!photo1File || !photo2File || !photo3File) {
+    if (!photos.slots[0].file || !photos.slots[1].file || !photos.slots[2].file) {
       setError('Všechny tři fotky jsou povinné.')
       setSubmitting(false)
       return
@@ -198,9 +181,9 @@ export default function Dashboard() {
       setUploadStatus('compressing')
       const timestamp = Date.now()
       const [compressed1, compressed2, compressed3] = await Promise.all([
-        compressImage(photo1File),
-        compressImage(photo2File),
-        compressImage(photo3File),
+        compressImage(photos.slots[0].file!),
+        compressImage(photos.slots[1].file!),
+        compressImage(photos.slots[2].file!),
       ])
 
       setUploadStatus('uploading')
@@ -225,9 +208,7 @@ export default function Dashboard() {
       setCatches(prev => [data, ...prev])
       setFishType('Kapr')
       setWeightKg('')
-      clearPhoto(1)
-      clearPhoto(2)
-      clearPhoto(3)
+      photos.clearAll()
       setUploadStatus('done')
       setTimeout(() => setUploadStatus('idle'), 3000)
     } catch (err) {
@@ -326,24 +307,24 @@ export default function Dashboard() {
             <div className="grid grid-cols-2 gap-3">
               <PhotoPicker
                 label="Levá strana"
-                preview={preview1}
-                onChange={f => setPhoto(1, f)}
-                onClear={() => clearPhoto(1)}
+                preview={photos.slots[0].preview}
+                onChange={f => photos.set(0, f)}
+                onClear={() => photos.clear(0)}
                 disabled={submitting}
               />
               <PhotoPicker
                 label="Pravá strana"
-                preview={preview2}
-                onChange={f => setPhoto(2, f)}
-                onClear={() => clearPhoto(2)}
+                preview={photos.slots[1].preview}
+                onChange={f => photos.set(1, f)}
+                onClear={() => photos.clear(1)}
                 disabled={submitting}
               />
             </div>
             <PhotoPicker
               label="Fotka váhy"
-              preview={preview3}
-              onChange={f => setPhoto(3, f)}
-              onClear={() => clearPhoto(3)}
+              preview={photos.slots[2].preview}
+              onChange={f => photos.set(2, f)}
+              onClear={() => photos.clear(2)}
               disabled={submitting}
             />
 
