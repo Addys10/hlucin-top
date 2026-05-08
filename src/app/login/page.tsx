@@ -30,14 +30,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[var(--ds-forest)] to-[var(--ds-forest-mid)] flex items-center justify-center px-4">
+    <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
 
         {/* Logo + title */}
         <div className="flex flex-col items-center mb-8 gap-3">
           <Image src="/image.png" alt="Hlučín Top 3" width={72} height={72} className="rounded-2xl shadow-xl ring-4 ring-white/20" />
-          <h1 className="text-2xl font-bold text-white tracking-wide">HLUČÍN TOP 3</h1>
-          <p className="text-sm text-[var(--ds-forest-pale)]">Přihlaste se ke svému týmu</p>
+          <h1 className="text-2xl font-extrabold text-white tracking-wide">HLUČÍN TOP 3</h1>
+          <p className="text-sm text-white/60">Přihlaste se ke svému týmu</p>
         </div>
 
         {/* Form */}
@@ -77,7 +77,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[var(--ds-forest)] hover:bg-[var(--ds-forest-mid)] disabled:opacity-60 text-white font-semibold rounded-xl py-3 text-sm transition-colors"
+            className="w-full bg-[var(--ds-forest)] hover:bg-[var(--ds-forest-mid)] disabled:opacity-60 text-white font-bold rounded-xl py-3 text-sm transition-colors shadow-[0_2px_8px_oklch(30%_0.10_148/0.35)] hover:shadow-[0_4px_14px_oklch(30%_0.10_148/0.45)] hover:-translate-y-px active:translate-y-0"
           >
             {loading ? 'Přihlašuji...' : 'Přihlásit se'}
           </button>

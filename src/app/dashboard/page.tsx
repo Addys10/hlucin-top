@@ -352,7 +352,11 @@ export default function Dashboard() {
             <div className="text-center py-12 text-gray-400 text-sm">Zatím žádné úlovky</div>
           ) : (
             catches.map((c, i) => (
-              <div key={c.id} className="flex items-center gap-3 px-4 py-3.5 border-b last:border-0 border-[var(--ds-border)]">
+              <div key={c.id} className={`flex items-center gap-3 px-4 py-3.5 border-b last:border-0 border-[var(--ds-border)] border-l-[3px] ${
+                c.status === 'approved' ? 'border-l-green-400' :
+                c.status === 'rejected' ? 'border-l-red-400' :
+                'border-l-amber-400'
+              }`}>
                 <div className="w-6 text-center text-[11px] text-[var(--ds-ink-4)] font-mono shrink-0">#{catches.length - i}</div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">

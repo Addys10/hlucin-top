@@ -343,7 +343,13 @@ export default function Leaderboard() {
               </div>
             ))
           ) : scores.length === 0 ? (
-            <div className="text-center py-14 text-gray-400 text-sm">Zatím žádné úlovky</div>
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <div className="w-14 h-14 rounded-full bg-[var(--ds-forest-pale)] flex items-center justify-center">
+                <Fish className="w-7 h-7 text-[var(--ds-forest-lt)]" />
+              </div>
+              <p className="text-[15px] font-semibold text-[var(--ds-ink-3)]">Závod ještě nezačal</p>
+              <p className="text-sm text-[var(--ds-ink-5)]">Úlovky se zobrazí hned po prvním schválení</p>
+            </div>
           ) : (
             scores.map((team, i) => {
               const rank = RANKS[i]
@@ -405,24 +411,39 @@ export default function Leaderboard() {
       <Dialog open={!!selectedTeam} onOpenChange={open => { if (!open) setSelectedTeam(null) }}>
         <DialogContent className="p-0 gap-0 w-full h-[100dvh] max-w-none sm:max-w-2xl sm:h-[90vh] rounded-none sm:rounded-2xl overflow-y-auto" showCloseButton={false} aria-describedby={undefined}>
           {/* Sticky header */}
-          <div className="flex items-center gap-3 px-4 h-14 border-b border-[var(--ds-border)] bg-white sticky top-0 z-10">
-            <button
-              onClick={() => setSelectedTeam(null)}
-              className="p-1.5 -ml-1.5 rounded-lg hover:bg-[var(--ds-sand-100)] text-[var(--ds-ink-3)] transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div className="flex flex-col min-w-0">
-              <DialogTitle className="font-extrabold text-[var(--ds-ink)] text-[15px] truncate leading-tight flex items-center gap-1">
-                {selectedTeam?.name}<PenaltyCards yellow_cards={selectedTeam?.yellow_cards ?? 0} />
-              </DialogTitle>
-              {(selectedTeam?.member1 || selectedTeam?.member2) && (
-                <p className="text-[12px] text-[var(--ds-ink-4)] truncate">
-                  {[selectedTeam.member1, selectedTeam.member2].filter(Boolean).join(' · ')}
-                </p>
-              )}
-            </div>
-          </div>
+          {(() => {
+            const rank = selectedTeam ? scores.findIndex(s => s.id === selectedTeam.id) + 1 : 0
+            const medalClass = rank === 1 ? 'bg-[var(--ds-gold)] text-[oklch(22%_0.06_80)] shadow-[0_2px_6px_var(--ds-gold)]'
+              : rank === 2 ? 'bg-[var(--ds-silver)] text-white'
+              : rank === 3 ? 'bg-[var(--ds-bronze)] text-white'
+              : 'bg-[var(--ds-sand-200)] text-[var(--ds-ink-3)]'
+            return (
+              <div className="flex items-center gap-3 px-4 h-14 border-b border-[var(--ds-border)] bg-white sticky top-0 z-10">
+                <button
+                  onClick={() => setSelectedTeam(null)}
+                  className="p-1.5 -ml-1.5 rounded-lg hover:bg-[var(--ds-sand-100)] text-[var(--ds-ink-3)] transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                {rank > 0 && (
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-[13px] font-extrabold font-mono ${medalClass}`}>
+                    {rank}
+                  </div>
+                )}
+                <div className="flex flex-col min-w-0">
+                  <DialogTitle className="font-extrabold text-[var(--ds-ink)] text-[15px] truncate leading-tight flex items-center gap-1">
+                    {selectedTeam?.name}<PenaltyCards yellow_cards={selectedTeam?.yellow_cards ?? 0} />
+                  </DialogTitle>
+                  {(selectedTeam?.member1 || selectedTeam?.member2) && (
+                    <p className="text-[12px] text-[var(--ds-ink-4)] truncate">
+                      {[selectedTeam.member1, selectedTeam.member2].filter(Boolean).join(' · ')}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )
+          })()}
+
 
           {selectedTeam && <TeamDetail team={selectedTeam} />}
         </DialogContent>
