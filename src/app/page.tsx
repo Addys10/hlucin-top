@@ -65,7 +65,7 @@ function calculateScores(teams: Team[], catches: Catch[]): TeamScore[] {
         heaviestFish: heaviest?.fish_type ?? '—',
       }
     })
-    .sort((a, b) => b.totalWeight - a.totalWeight)
+    .sort((a, b) => b.totalWeight - a.totalWeight || a.name.localeCompare(b.name, 'cs'))
 }
 
 function PenaltyCards({ yellow_cards }: { yellow_cards: number }) {
